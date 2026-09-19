@@ -43,6 +43,12 @@ public partial class App : Application
         _tray.TrayMouseDoubleClick += Tray_DoubleClick;
         _tray.ContextMenu = BuildContextMenu();
 
+        // 调试辅助：--show-main 启动即打开主窗口；--show-popup 启动即弹出控制中心面板
+        if (e.Args.Contains("--show-main"))
+            ShowMainWindow();
+        else if (e.Args.Contains("--show-popup"))
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, ShowPopup);
+
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
     }
 

@@ -14,9 +14,11 @@ public partial class PopupWindow : Window
     public void ShowNearTray()
     {
         var wa = SystemParameters.WorkArea;
-        Left = wa.Right - Width - 14;
-        Top = wa.Bottom - Height - 14;
         Show();
+        UpdateLayout();
+        // SizeToContent=Height 时需布局后才有实际尺寸
+        Left = wa.Right - ActualWidth - 14;
+        Top = wa.Bottom - ActualHeight - 14;
         Activate();
     }
 
