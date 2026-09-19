@@ -5,6 +5,15 @@
              MinWidth="560">
     <UserControl.Resources>
 
+        <!-- 设备列表数据源（供应用音频下拉使用 CompositeCollection） -->
+        <CollectionViewSource x:Key="RenderDevicesCVS" Source="{Binding RenderDevices}"/>
+        <CollectionViewSource x:Key="CaptureDevicesCVS" Source="{Binding CaptureDevices}"/>
+
+        <!-- 设备项显示模板 -->
+        <DataTemplate x:Key="DeviceItemTemplate" DataType="{x:Type models:AudioDeviceItem}">
+            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBrush}"/>
+        </DataTemplate>
+
         <!-- 应用行卡片（系统音量合成器样式） -->
         <DataTemplate x:Key="SessionTemplate" DataType="{x:Type models:AppSessionItem}">
             <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,8">
@@ -85,12 +94,12 @@
 
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="输出" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="OutputCombo" Style="{StaticResource ComboStyle}" SelectionChanged="SessionOutput_SelectionChanged"
+                            <ComboBox x:Name="OutputCombo" Style="{StaticResource ComboStyle}" ItemTemplate="{StaticResource DeviceItemTemplate}" SelectionChanged="SessionOutput_SelectionChanged"
                                       Tag="{Binding}" Loaded="SessionCombo_Loaded">
                                 <ComboBox.ItemsSource>
                                     <CompositeCollection>
-                                        <ComboBoxItem Content="跟随默认"/>
-                                        <CollectionContainer Collection="{Binding DataContext.RenderDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        <ComboBoxItem Content="默认"/>
+                                        <CollectionContainer Collection="{Binding Source={StaticResource RenderDevicesCVS}}"/>
                                     </CompositeCollection>
                                 </ComboBox.ItemsSource>
                             </ComboBox>
@@ -98,12 +107,12 @@
 
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="输入" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="12" Margin="0,0,0,4"/>
-                            <ComboBox x:Name="InputCombo" Style="{StaticResource ComboStyle}" SelectionChanged="SessionInput_SelectionChanged"
+                            <ComboBox x:Name="InputCombo" Style="{StaticResource ComboStyle}" ItemTemplate="{StaticResource DeviceItemTemplate}" SelectionChanged="SessionInput_SelectionChanged"
                                       Tag="{Binding}" Loaded="SessionCombo_Loaded">
                                 <ComboBox.ItemsSource>
                                     <CompositeCollection>
-                                        <ComboBoxItem Content="跟随默认"/>
-                                        <CollectionContainer Collection="{Binding DataContext.CaptureDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        <ComboBoxItem Content="默认"/>
+                                        <CollectionContainer Collection="{Binding Source={StaticResource CaptureDevicesCVS}}"/>
                                     </CompositeCollection>
                                 </ComboBox.ItemsSource>
                             </ComboBox>
@@ -119,25 +128,34 @@
 
         <!-- 蓝牙设备卡片 -->
         <DataTemplate x:Key="BtTemplate" DataType="{x:Type models:BluetoothDeviceItem}">
-            <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,10,10" MinWidth="160">
-                <StackPanel Width="160">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,7,0">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="{DynamicResource TextTertiaryBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                                            <Setter Property="Fill" Value="{DynamicResource GreenBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13"/>
+            <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,10,10" MinWidth="180">
+                <StackPanel Width="180">
+                    <Grid Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,7,0">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{DynamicResource TextTertiaryBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                <Setter Property="Fill" Value="{DynamicResource GreenBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13"/>
+                        </StackPanel>
+                        <Button Content="&#8943;" Click="MoreBt_Click" Tag="{Binding}"
+                                Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextTertiaryBrush}"
+                                FontSize="16" FontWeight="Bold" Cursor="Hand" HorizontalAlignment="Right"
+                                ToolTip="备注品牌 / 设备信息"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="{Binding BrandIcon}" FontSize="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="140"/>
                     </StackPanel>
-                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" MaxWidth="150" Margin="0,0,0,4"/>
                     <TextBlock Text="{Binding BatteryText}" FontSize="12" Margin="0,0,0,8">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
@@ -259,13 +277,13 @@
                                     <TextBlock Text="输出" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,6"/>
                                     <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding RenderDevices}"
                                               SelectedItem="{Binding SelectedDefaultOutput, Mode=TwoWay}"
-                                              DisplayMemberPath="DisplayName"/>
+                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="输入" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,6"/>
                                     <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding CaptureDevices}"
                                               SelectedItem="{Binding SelectedDefaultInput, Mode=TwoWay}"
-                                              DisplayMemberPath="DisplayName"/>
+                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>

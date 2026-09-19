@@ -182,7 +182,7 @@
                             <Grid VerticalAlignment="Center">
                                 <Track x:Name="PART_Track" VerticalAlignment="Center" Height="6">
                                     <Track.DecreaseRepeatButton>
-                                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False" Opacity="0">
+                                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False" Opacity="1">
                                             <RepeatButton.Template>
                                                 <ControlTemplate TargetType="RepeatButton">
                                                     <Border Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
@@ -191,7 +191,7 @@
                                         </RepeatButton>
                                     </Track.DecreaseRepeatButton>
                                     <Track.IncreaseRepeatButton>
-                                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False" Opacity="0">
+                                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False" Opacity="1">
                                             <RepeatButton.Template>
                                                 <ControlTemplate TargetType="RepeatButton">
                                                     <Border Background="{DynamicResource SliderTrackBrush}" CornerRadius="3"/>

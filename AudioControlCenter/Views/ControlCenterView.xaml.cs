@@ -74,6 +74,37 @@ public partial class ControlCenterView : UserControl
         Vm.ToggleScan();
     }
 
+    private void MoreBt_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: BluetoothDeviceItem item }) return;
+
+        var dlg = new Window
+        {
+            Title = $"备注 - {item.Name}",
+            Width = 360,
+            Height = 220,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = Window.GetWindow(this),
+            ResizeMode = ResizeMode.NoResize,
+            Background = System.Windows.Application.Current.Resources["CardBrush"] as System.Windows.Media.Brush,
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(20) };
+        panel.Children.Add(new TextBlock { Text = "品牌备注（自定义图标匹配关键词）:", FontSize = 14, Margin = new Thickness(0,0,0,8) });
+        var input = new TextBox { Text = item.UserBrand ?? "", FontSize = 15, Margin = new Thickness(0,0,0,12) };
+        panel.Children.Add(input);
+
+        var save = new Button { Content = "保存", Width = 90, Height = 34, HorizontalAlignment = HorizontalAlignment.Right };
+        save.Click += (_, _) =>
+        {
+            item.UserBrand = string.IsNullOrWhiteSpace(input.Text) ? null : input.Text.Trim();
+            dlg.DialogResult = true;
+        };
+        panel.Children.Add(save);
+        dlg.Content = panel;
+        dlg.ShowDialog();
+    }
+
     private void ShowAll_Click(object sender, RoutedEventArgs e)
     {
         Vm.ShowAllBluetooth = !Vm.ShowAllBluetooth;
