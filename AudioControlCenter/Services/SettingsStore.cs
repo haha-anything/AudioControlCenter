@@ -27,6 +27,12 @@ public sealed class SettingsStore
 
         /// <summary>主题：0=跟随系统 1=深色 2=浅色</summary>
         public int ThemeMode { get; set; } = 0;
+
+        /// <summary>开机自启</summary>
+        public bool AutoStart { get; set; } = false;
+
+        /// <summary>低电量提醒</summary>
+        public bool LowBatteryAlert { get; set; } = true;
     }
 
     public SettingsStore(string? path = null)
@@ -71,6 +77,35 @@ public sealed class SettingsStore
     {
         get => _data.ThemeMode;
         set { _data.ThemeMode = value; Save(); }
+    }
+
+    public bool AutoStart
+    {
+        get => _data.AutoStart;
+        set { _data.AutoStart = value; Save(); ApplyAutoStart(); }
+    }
+
+    public bool LowBatteryAlert
+    {
+        get => _data.LowBatteryAlert;
+        set { _data.LowBatteryAlert = value; Save(); }
+    }
+
+    /// <summary>写开机自启注册表</summary>
+    private void ApplyAutoStart()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+            if (key == null) return;
+            const string name = "AudioControlCenter";
+            if (_data.AutoStart)
+                key.SetValue(name, $"\"{Environment.ProcessPath}\"");
+            else
+                key.DeleteValue(name, false);
+        }
+        catch { }
     }
 
     public void SetVolume(string processName, float volume)

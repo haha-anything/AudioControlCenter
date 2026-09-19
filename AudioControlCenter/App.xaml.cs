@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Windows;
 using AudioControlCenter.Services;
@@ -143,21 +143,82 @@ public partial class App : Application
     {
         var menu = new System.Windows.Controls.ContextMenu();
 
-        var open = new System.Windows.Controls.MenuItem { Header = "打开主窗口" };
-        open.Click += (_, _) => ShowMainWindow();
+        var open = new System.Windows.Controls.MenuItem { Header = "📋 控制中心面板" };
+        open.Click += (_, _) => ShowPopup();
         menu.Items.Add(open);
 
-        var refresh = new System.Windows.Controls.MenuItem { Header = "立即刷新" };
+        var main = new System.Windows.Controls.MenuItem { Header = "🖥️ 打开主窗口" };
+        main.Click += (_, _) => ShowMainWindow();
+        menu.Items.Add(main);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        var themeMenu = new System.Windows.Controls.MenuItem { Header = "🎨 主题" };
+        var themes = new[] { ("跟随系统", 0), ("深色", 1), ("浅色", 2) };
+        foreach (var (label, mode) in themes)
+        {
+            var item = new System.Windows.Controls.MenuItem
+            {
+                Header = label,
+                IsCheckable = true,
+                IsChecked = Vm.Settings.ThemeMode == mode,
+            };
+            var m = mode;
+            item.Click += (_, _) =>
+            {
+                Vm.Settings.ThemeMode = m;
+                ApplyTheme(m);
+                RebuildTrayMenu();
+            };
+            themeMenu.Items.Add(item);
+        }
+        menu.Items.Add(themeMenu);
+
+        var autostart = new System.Windows.Controls.MenuItem
+        {
+            Header = "🚀 开机自启",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.AutoStart,
+        };
+        autostart.Click += (_, _) =>
+        {
+            Vm.Settings.AutoStart = autostart.IsChecked;
+            RebuildTrayMenu();
+        };
+        menu.Items.Add(autostart);
+
+        var battery = new System.Windows.Controls.MenuItem
+        {
+            Header = "🔋 低电量提醒",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.LowBatteryAlert,
+        };
+        battery.Click += (_, _) =>
+        {
+            Vm.Settings.LowBatteryAlert = battery.IsChecked;
+            RebuildTrayMenu();
+        };
+        menu.Items.Add(battery);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        var refresh = new System.Windows.Controls.MenuItem { Header = "🔄 立即刷新" };
         refresh.Click += (_, _) => Vm.RefreshAll();
         menu.Items.Add(refresh);
 
         menu.Items.Add(new System.Windows.Controls.Separator());
 
-        var exit = new System.Windows.Controls.MenuItem { Header = "退出" };
+        var exit = new System.Windows.Controls.MenuItem { Header = "❌ 退出" };
         exit.Click += (_, _) => ExitApp();
         menu.Items.Add(exit);
 
         return menu;
+    }
+
+    private void RebuildTrayMenu()
+    {
+        if (_tray != null)
+            _tray.ContextMenu = BuildContextMenu();
     }
 
     private void ExitApp()
