@@ -123,6 +123,8 @@ public sealed class BluetoothService : IDisposable
         {
             var classic = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             try { classic = await BtWinrt.ReadAllClassicBatteryAsync(); } catch { }
+            var power = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            try { power = await BtWinrt.ReadBatteryViaPowerApiAsync(); } catch { }
 
             foreach (var item in _items.Values.ToList())
             {
@@ -138,6 +140,8 @@ public sealed class BluetoothService : IDisposable
                 }
                 if (pct == null && classic.TryGetValue(item.Name, out var cp))
                     pct = cp;
+                if (pct == null && power.TryGetValue(item.Name, out var pp))
+                    pct = pp;
                 item.BatteryPercent = pct;
 
                 if (pct is int p && p <= 20 && Settings != null && !Settings.IsLowBatteryNotified(mac, p))

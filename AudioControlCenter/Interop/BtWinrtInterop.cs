@@ -5,6 +5,7 @@ using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
+using Windows.Devices.Power;
 using Windows.Foundation;
 using Windows.Storage.Streams;
 
@@ -106,6 +107,43 @@ public static class BtWinrt
         return result;
     }
 
+    /// <summary>通过 Windows.Devices.Power.Battery API 读所有电池设备电量（含蓝牙音箱/耳机）</summary>
+    public static async System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, int>> ReadBatteryViaPowerApiAsync()
+    {
+        var result = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var selector = Battery.GetDeviceSelector();
+            var devices = await DeviceInformation.FindAllAsync(selector);
+            var dbg = new System.Text.StringBuilder();
+            dbg.AppendLine($"Power API: found {devices.Count} battery devices");
+            foreach (var d in devices)
+            {
+                try
+                {
+                    var bat = await Battery.FromIdAsync(d.Id);
+                    if (bat == null) continue;
+                    var report = bat.GetReport();
+                    if (report == null) continue;
+                    int? pct = null;
+                    if (report.RemainingCapacityInMilliwattHours.HasValue && report.FullChargeCapacityInMilliwattHours.HasValue && report.FullChargeCapacityInMilliwattHours.Value > 0)
+                        pct = (int)(report.RemainingCapacityInMilliwattHours.Value * 100.0 / report.FullChargeCapacityInMilliwattHours.Value);
+                    dbg.AppendLine($"  {d.Name} (Id={d.Id}) => remaining={report.RemainingCapacityInMilliwattHours} full={report.FullChargeCapacityInMilliwattHours} status={report.Status} pct={pct}%");
+                    if (pct.HasValue && pct.Value >= 0 && pct.Value <= 100)
+                    {
+                        result[d.Name] = pct.Value;
+                    }
+                }
+                catch { }
+            }
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), dbg.ToString());
+        }
+        catch (Exception ex)
+        {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), $"Power API error: {ex.Message}\n");
+        }
+        return result;
+    }
     /// <summary>配对 BLE 设备（系统级配对）</summary>
     public static async Task<bool> PairAsync(ulong address)
     {
