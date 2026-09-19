@@ -85,25 +85,24 @@ public static class BtWinrt
         var result = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         try
         {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), $"ReadAllClassicBattery called at {DateTime.Now:HH:mm:ss}\n");
             var selector = BluetoothDevice.GetDeviceSelector();
             var devices = await DeviceInformation.FindAllAsync(selector);
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), $"found {devices.Count} devices\n");
             foreach (var d in devices)
             {
                 try
                 {
                     if (string.IsNullOrWhiteSpace(d.Name)) continue;
-                    if (d.Properties != null &&
-                        d.Properties.TryGetValue("System.Devices.Bluetooth.DeviceBatteryLevel", out var v) &&
-                        v != null)
-                    {
-                        int pct = Convert.ToInt32(v);
-                        if (pct >= 0 && pct <= 100) result[d.Name] = pct;
-                    }
+                    // 经典蓝牙 HFP 电量：Windows 公开 API 不直接暴露，保留 GATT 读取（在 BluetoothService 里按 MAC 读）
                 }
                 catch { }
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), $"OUTER ERROR: {ex.Message}\n{ex.StackTrace}\n");
+        }
         return result;
     }
 
