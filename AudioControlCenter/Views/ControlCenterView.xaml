@@ -251,10 +251,19 @@
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🎚️ 正在使用音频的应用" FontSize="17" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Sessions.Count, StringFormat={}共 {0} 个}" FontSize="17"
-                                       Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="10,0,0,0"/>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="🎚️ 正在使用音频的应用" FontSize="17" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Sessions.Count, StringFormat={}共 {0} 个}" FontSize="17"
+                                           Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding Sessions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="17" Margin="0,2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
                     </Border>
                 </StackPanel>

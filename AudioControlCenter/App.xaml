@@ -173,6 +173,8 @@
             <!-- 音量滑块 -->
             <Style x:Key="SliderStyle" TargetType="Slider">
                 <Setter Property="Height" Value="24"/>
+                <Setter Property="Minimum" Value="0"/>
+                <Setter Property="Maximum" Value="1"/>
                 <Setter Property="IsMoveToPointEnabled" Value="True"/>
                 <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                 <Setter Property="Background" Value="{DynamicResource SliderTrackBrush}"/>

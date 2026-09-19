@@ -24,6 +24,7 @@ public sealed class ControlCenterViewModel : ObservableObject
 
     private readonly DispatcherTimer _sessionTimer;
     private readonly DispatcherTimer _batteryTimer;
+    private readonly DispatcherTimer _btTimer;
 
     /// <summary>低电量提醒（mac, name, percent），由 App 弹托盘通知</summary>
     public event Action<string, string, int>? LowBatteryNotify;
@@ -106,14 +107,42 @@ public sealed class ControlCenterViewModel : ObservableObject
         _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _sessionTimer.Tick += (_, _) => RefreshSessionsOnly();
 
+
+        // 蓝牙连接状态定时刷新：8 秒一轮（外部断开/连接后 UI 自动同步）
+        _btTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        _btTimer.Tick += async (_, _) => await RefreshBluetoothStateAsync();
+
         // 电量定时刷新：30 秒一轮；连接状态变化时也会补一次
         _batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _batteryTimer.Tick += async (_, _) => await RefreshBatteriesAsync();
 
         _sessionTimer.Start();
+        _btTimer.Start();
         _batteryTimer.Start();
     }
 
+    /// <summary>只刷新蓝牙连接状态（不重建设备列表）</summary>
+    private async Task RefreshBluetoothStateAsync()
+    {
+        try
+        {
+            Bluetooth.Refresh(Audio);
+            for (int i = 0; i < BluetoothDevices.Count; i++)
+            {
+                var src = Bluetooth.Devices.FirstOrDefault(x => x.Key == BluetoothDevices[i].Key);
+                if (src != null && BluetoothDevices[i].IsConnected != src.IsConnected)
+                {
+                    BluetoothDevices[i].IsConnected = src.IsConnected;
+                    BluetoothDevices[i].RefreshStatus();
+                }
+            }
+            ConnectedBluetoothDevices.Clear();
+            foreach (var b in BluetoothDevices.Where(x => x.IsConnected)) ConnectedBluetoothDevices.Add(b);
+            OnPropertyChanged(nameof(NoConnectedBluetooth));
+            OnPropertyChanged(nameof(VisibleBluetoothDevices));
+        }
+        catch { }
+    }
     private void OnBluetoothDevicesChanged()
     {
         OnPropertyChanged(nameof(ShowAllButtonVisibility));
