@@ -24,7 +24,7 @@
             <conv:TabCheckedConverter x:Key="TabCheckedConverter"/>
 
             <!-- 全局基准字号（正文 16，适配 125% 系统缩放） -->
-            <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="BaseFontSize">16</sys:Double>
+            <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="BaseFontSize">18</sys:Double>
 
             <!-- 隐式文本样式：所有 TextBlock 默认前景色 + 16 号 -->
             <Style TargetType="TextBlock">
@@ -46,7 +46,7 @@
             <!-- 小节标题 -->
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontSize" Value="17"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Margin" Value="2,0,0,10"/>
             </Style>
@@ -54,7 +54,7 @@
             <!-- 主按钮（连接/断开） -->
             <Style x:Key="PillButtonStyle" TargetType="Button">
                 <Setter Property="Foreground" Value="White"/>
-                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontSize" Value="17"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Padding" Value="16,8"/>
@@ -223,7 +223,7 @@
             <!-- 左侧导航按钮（Clash 风格） -->
             <Style x:Key="NavButtonStyle" TargetType="RadioButton">
                 <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-                <Setter Property="FontSize" Value="15"/>
+                <Setter Property="FontSize" Value="17"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Margin" Value="8,2"/>
                 <Setter Property="Padding" Value="14,11"/>
