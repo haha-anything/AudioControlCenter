@@ -2,11 +2,12 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using AudioControlCenter.Models;
 
 namespace AudioControlCenter.Services;
 
-/// <summary>控制中心视图模型：聚合音频 + 蓝牙 + 记忆服务</summary>
+/// <summary>控制中心视图模型：聚合音频 + 蓝牙 + 记忆服务 + 实时监测</summary>
 public sealed class ControlCenterViewModel : ObservableObject
 {
     public AudioService Audio { get; }
@@ -15,8 +16,15 @@ public sealed class ControlCenterViewModel : ObservableObject
 
     public ObservableCollection<AppSessionItem> Sessions { get; } = new();
     public ObservableCollection<BluetoothDeviceItem> BluetoothDevices { get; } = new();
+    public ObservableCollection<ScanDeviceItem> ScanResults { get; } = new();
     public ObservableCollection<AudioDeviceItem> RenderDevices { get; } = new();
     public ObservableCollection<AudioDeviceItem> CaptureDevices { get; } = new();
+
+    private readonly DispatcherTimer _sessionTimer;
+    private readonly DispatcherTimer _batteryTimer;
+
+    /// <summary>低电量提醒（mac, name, percent），由 App 弹托盘通知</summary>
+    public event Action<string, string, int>? LowBatteryNotify;
 
     private AudioDeviceItem? _selectedDefaultOutput;
     public AudioDeviceItem? SelectedDefaultOutput
@@ -53,12 +61,24 @@ public sealed class ControlCenterViewModel : ObservableObject
         set => Set(ref _statusText, value);
     }
 
-    private bool _isRefreshing;
-    public bool IsRefreshing
+    private bool _showAllBluetooth;
+    /// <summary>蓝牙设备区是否展开显示全部</summary>
+    public bool ShowAllBluetooth
     {
-        get => _isRefreshing;
-        set => Set(ref _isRefreshing, value);
+        get => _showAllBluetooth;
+        set
+        {
+            if (Set(ref _showAllBluetooth, value))
+            {
+                OnPropertyChanged(nameof(ShowAllButtonText));
+                OnPropertyChanged(nameof(VisibleBluetoothDevices));
+                OnPropertyChanged(nameof(ShowAllButtonVisibility));
+            }
+        }
     }
+
+    public string ShowAllButtonText => ShowAllBluetooth ? "收起" : "查看全部";
+    public bool ShowAllButtonVisibility => BluetoothDevices.Count > 3;
 
     private int _loading; // 加载期间禁止触发 setter 副作用
 
@@ -68,6 +88,35 @@ public sealed class ControlCenterViewModel : ObservableObject
         Bluetooth = new BluetoothService();
         Settings = new SettingsStore();
         Settings.Load();
+        Bluetooth.Settings = Settings;
+        Bluetooth.DevicesChanged += OnBluetoothDevicesChanged;
+        Bluetooth.ScanResultsChanged += OnScanResultsChanged;
+
+        // 会话实时监测：2 秒一轮（新应用打开/退出自动出现/消失）
+        _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _sessionTimer.Tick += (_, _) => RefreshSessionsOnly();
+
+        // 电量定时刷新：30 秒一轮；连接状态变化时也会补一次
+        _batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _batteryTimer.Tick += async (_, _) => await RefreshBatteriesAsync();
+
+        _sessionTimer.Start();
+        _batteryTimer.Start();
+    }
+
+    private void OnBluetoothDevicesChanged()
+    {
+        OnPropertyChanged(nameof(ShowAllButtonVisibility));
+    }
+
+    private void OnScanResultsChanged()
+    {
+        // 将扫描结果同步到 UI 集合（保持去重）
+        ScanResults.Clear();
+        foreach (var s in Bluetooth.ScanResults)
+            ScanResults.Add(s);
+        if (IsScanning)
+            ScanStatusText = $"扫描中… 已发现 {ScanResults.Count} 个设备";
     }
 
     /// <summary>全量刷新（设备 + 蓝牙 + 会话）</summary>
@@ -93,13 +142,37 @@ public sealed class ControlCenterViewModel : ObservableObject
                 b.OwnerAudio = Audio;
                 BluetoothDevices.Add(b);
             }
+            OnPropertyChanged(nameof(VisibleBluetoothDevices));
+            OnPropertyChanged(nameof(ShowAllButtonVisibility));
 
             RefreshSessionsOnly();
             StatusText = $"已刷新 · {RenderDevices.Count} 个输出 · {CaptureDevices.Count} 个输入 · {BluetoothDevices.Count} 个蓝牙设备";
+
+            // 连接状态变化后补一次电量读取
+            _ = RefreshBatteriesAsync();
         }
         finally
         {
             _loading--;
+        }
+    }
+
+    /// <summary>蓝牙设备显示集合：默认前 3 个（最近优先），展开后全部</summary>
+    public System.Collections.Generic.IEnumerable<BluetoothDeviceItem> VisibleBluetoothDevices
+    {
+        get
+        {
+            if (ShowAllBluetooth) return BluetoothDevices;
+            var recent = Bluetooth.GetRecentDevices(3);
+            var recentKeys = recent.Select(r => r.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // 最近 3 个优先，其余按名称补足到 3 个
+            var list = recent.ToList();
+            foreach (var b in BluetoothDevices.Where(x => !recentKeys.Contains(x.Key)).OrderBy(x => x.Name))
+            {
+                if (list.Count >= 3) break;
+                list.Add(b);
+            }
+            return list;
         }
     }
 
@@ -133,14 +206,63 @@ public sealed class ControlCenterViewModel : ObservableObject
             return;
         }
         await Bluetooth.SetConnectedAsync(item, !item.IsConnected);
-        BluetoothDevices.Clear();
-        foreach (var b in Bluetooth.Devices)
-        {
-            b.OwnerAudio = Audio;
-            BluetoothDevices.Add(b);
-        }
-        // 蓝牙状态变化后音频设备也会变，刷新一下
         RefreshAll();
+    }
+
+    // ---------- 蓝牙电量 ----------
+
+    private async Task RefreshBatteriesAsync()
+    {
+        await Bluetooth.RefreshBatteriesAsync(OnLowBattery);
+    }
+
+    private void OnLowBattery(string mac, string name, int percent)
+        => LowBatteryNotify?.Invoke(mac, name, percent);
+
+    // ---------- BLE 扫描 / 配对 ----------
+
+    private bool _isScanning;
+    public bool IsScanning
+    {
+        get => _isScanning;
+        set
+        {
+            if (Set(ref _isScanning, value))
+                OnPropertyChanged(nameof(ScanButtonText));
+        }
+    }
+
+    private string _scanStatusText = "";
+    public string ScanStatusText
+    {
+        get => _scanStatusText;
+        set => Set(ref _scanStatusText, value);
+    }
+
+    public string ScanButtonText => IsScanning ? "停止扫描" : "扫描新设备";
+
+    public void ToggleScan()
+    {
+        if (IsScanning)
+        {
+            Bluetooth.StopScan();
+            IsScanning = false;
+            ScanStatusText = $"已停止 · 共发现 {ScanResults.Count} 个设备";
+        }
+        else
+        {
+            ScanResults.Clear();
+            Bluetooth.ClearScanResults();
+            Bluetooth.StartScan();
+            IsScanning = true;
+            ScanStatusText = "扫描中… 让设备进入配对模式";
+        }
+    }
+
+    public async Task PairScanDeviceAsync(ScanDeviceItem item)
+    {
+        bool ok = await Bluetooth.PairAsync(item);
+        StatusText = ok ? $"「{item.Name}」配对成功，可在蓝牙设备列表连接" : $"「{item.Name}」配对失败，请靠近设备重试";
     }
 
     /// <summary>为应用设置输出设备（null 或空 = 跟随默认）</summary>

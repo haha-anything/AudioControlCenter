@@ -91,6 +91,13 @@ public sealed class AudioService : IDisposable
                 });
             }
         }
+
+        // 稳定排序：默认设备优先，其余按名称（避免系统"最后使用"乱序）
+        target.Sort((a, b) =>
+        {
+            if (a.IsDefault != b.IsDefault) return a.IsDefault ? -1 : 1;
+            return string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase);
+        });
     }
 
     /// <summary>刷新应用会话（按进程合并渲染/采集会话）</summary>
@@ -98,7 +105,9 @@ public sealed class AudioService : IDisposable
     {
         Sessions.Clear();
 
-        var sessionsByPid = new Dictionary<uint, (MMDevice renderDev, AudioSessionControl2? renderSession, MMDevice? captureDev)>();
+        var sessionsByPid = new Dictionary<uint,
+            (string RenderDevId, string RenderDevName, AudioSessionControl2? RenderSession,
+             string CaptureDevId, string CaptureDevName)>();
         try
         {
             using var enumerator = new MMDeviceEnumerator();
@@ -108,26 +117,28 @@ public sealed class AudioService : IDisposable
             // 1) 渲染设备的会话
             foreach (var dev in renderCol)
             {
+                string devId, devName;
                 using (dev)
                 {
+                    devId = dev.DeviceID;
+                    devName = dev.FriendlyName;
                     using var mgr = GetSessionManager(dev);
                     if (mgr == null) continue;
                     using var sessions = mgr.GetSessionEnumerator();
                     for (int i = 0; i < sessions.Count; i++)
                     {
                         using var session = sessions[i];
-                        if (session is not AudioSessionControl2 s2) continue;
+                        var s2 = session.QueryInterface<AudioSessionControl2>();
+                        if (s2 == null) continue;
                         try
                         {
                             uint pid = (uint)s2.ProcessID;
                             if (pid == 0) continue;
                             if (!sessionsByPid.TryGetValue(pid, out var entry))
-                                entry = (dev, s2, null);
+                                entry = (devId, devName, s2, "", "");
                             else
-                                entry.renderSession?.Dispose();
-                            // 让 s2 脱离 using 生命周期（转由字典持有）
-                            GC.SuppressFinalize(s2);
-                            sessionsByPid[pid] = (entry.renderDev, s2, entry.captureDev);
+                                entry.RenderSession?.Dispose();
+                            sessionsByPid[pid] = (entry.RenderDevId, entry.RenderDevName, s2, entry.CaptureDevId, entry.CaptureDevName);
                         }
                         catch { }
                     }
@@ -137,21 +148,25 @@ public sealed class AudioService : IDisposable
             // 2) 采集设备的会话（用于匹配输入设备）
             foreach (var dev in captureCol)
             {
+                string devId, devName;
                 using (dev)
                 {
+                    devId = dev.DeviceID;
+                    devName = dev.FriendlyName;
                     using var mgr = GetSessionManager(dev);
                     if (mgr == null) continue;
                     using var sessions = mgr.GetSessionEnumerator();
                     for (int i = 0; i < sessions.Count; i++)
                     {
                         using var session = sessions[i];
-                        if (session is not AudioSessionControl2 s2) continue;
+                        var s2 = session.QueryInterface<AudioSessionControl2>();
+                        if (s2 == null) continue;
                         try
                         {
                             uint pid = (uint)s2.ProcessID;
                             if (pid == 0) continue;
                             if (sessionsByPid.TryGetValue(pid, out var entry))
-                                sessionsByPid[pid] = (entry.renderDev, entry.renderSession, dev);
+                                sessionsByPid[pid] = (entry.RenderDevId, entry.RenderDevName, entry.RenderSession, devId, devName);
                         }
                         catch { }
                     }
@@ -166,8 +181,8 @@ public sealed class AudioService : IDisposable
         // 3) 构建 UI 模型
         foreach (var kv in sessionsByPid.OrderBy(k => GetProcessName(k.Key)))
         {
-            var (renderDev, renderSession, captureDev) = kv.Value;
-            if (renderSession == null && captureDev == null) continue;
+            var (renderDevId, renderDevName, renderSession, captureDevId, captureDevName) = kv.Value;
+            if (renderSession == null && captureDevId.Length == 0) continue;
 
             var item = new AppSessionItem
             {
@@ -185,8 +200,8 @@ public sealed class AudioService : IDisposable
                     item.Volume = volume.MasterVolume;
                     item.IsMuted = volume.IsMuted;
                 }
-                item.CurrentOutputDeviceId = renderDev.DeviceID;
-                item.CurrentOutputDeviceName = renderDev.FriendlyName;
+                item.CurrentOutputDeviceId = renderDevId;
+                item.CurrentOutputDeviceName = renderDevName;
             }
             else
             {
@@ -194,10 +209,10 @@ public sealed class AudioService : IDisposable
                 item.CurrentOutputDeviceName = "（无输出）";
             }
 
-            if (captureDev != null)
+            if (captureDevId.Length > 0)
             {
-                item.CurrentInputDeviceId = captureDev.DeviceID;
-                item.CurrentInputDeviceName = captureDev.FriendlyName;
+                item.CurrentInputDeviceId = captureDevId;
+                item.CurrentInputDeviceName = captureDevName;
             }
             else
             {
@@ -213,7 +228,7 @@ public sealed class AudioService : IDisposable
 
         // 释放持有中的会话对象
         foreach (var kv in sessionsByPid.Values)
-            kv.renderSession?.Dispose();
+            kv.RenderSession?.Dispose();
     }
 
     private static AudioSessionManager2? GetSessionManager(MMDevice dev)
@@ -238,11 +253,28 @@ public sealed class AudioService : IDisposable
             try
             {
                 var n = session.DisplayName;
-                if (!string.IsNullOrWhiteSpace(n)) return n;
+                if (!string.IsNullOrWhiteSpace(n))
+                    return ResolveDisplayName(n);
             }
             catch { }
         }
         return GetProcessName(pid);
+    }
+
+    /// <summary>解析资源字符串显示名（如 "@%SystemRoot%\...AudioSrv.Dll,-202" → "系统声音"）</summary>
+    private static string ResolveDisplayName(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw) || !raw.StartsWith("@", StringComparison.Ordinal))
+            return raw;
+        try
+        {
+            var sb = new System.Text.StringBuilder(1024);
+            int hr = Interop.Shell32Interop.SHLoadIndirectString(raw, sb, sb.Capacity, IntPtr.Zero);
+            if (hr == 0 && sb.Length > 0)
+                return sb.ToString();
+        }
+        catch { }
+        return raw;
     }
 
     private static string? GetIconPath(uint pid)
@@ -346,7 +378,8 @@ public sealed class AudioService : IDisposable
                 for (int i = 0; i < sessions.Count; i++)
                 {
                     using var session = sessions[i];
-                    if (session is not AudioSessionControl2 s2) continue;
+                    var s2 = session.QueryInterface<AudioSessionControl2>();
+                    if (s2 == null) continue;
                     if ((uint)s2.ProcessID != pid) continue;
                     using var vol = session.QueryInterface<SimpleAudioVolume>();
                     if (vol == null) continue;

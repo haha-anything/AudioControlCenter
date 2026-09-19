@@ -18,6 +18,12 @@ public sealed class SettingsStore
     {
         /// <summary>进程名（小写）→ 应用音量 0-1（null 表示未自定义）</summary>
         public Dictionary<string, float> VolumeByApp { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>蓝牙 MAC → 最近连接时间（Ticks）；用于"最近设备"排序</summary>
+        public Dictionary<string, long> BluetoothLastConnected { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>蓝牙 MAC → 已通知低电量值（避免重复提醒）</summary>
+        public Dictionary<string, int> BatteryLowNotified { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     public SettingsStore(string? path = null)
@@ -60,6 +66,26 @@ public sealed class SettingsStore
     public void SetVolume(string processName, float volume)
     {
         _data.VolumeByApp[processName] = volume;
+        Save();
+    }
+
+    /// <summary>记录蓝牙设备最近连接时间</summary>
+    public void TouchBluetooth(string mac)
+    {
+        _data.BluetoothLastConnected[mac] = DateTime.UtcNow.Ticks;
+        Save();
+    }
+
+    public long GetBluetoothLastConnected(string mac)
+        => _data.BluetoothLastConnected.TryGetValue(mac, out var t) ? t : 0;
+
+    /// <summary>该电量是否已通知过低电量</summary>
+    public bool IsLowBatteryNotified(string mac, int percent)
+        => _data.BatteryLowNotified.TryGetValue(mac, out var p) && p <= percent;
+
+    public void MarkLowBatteryNotified(string mac, int percent)
+    {
+        _data.BatteryLowNotified[mac] = percent;
         Save();
     }
 }

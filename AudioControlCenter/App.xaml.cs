@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Windows;
 using AudioControlCenter.Services;
 using AudioControlCenter.Views;
@@ -18,10 +19,34 @@ public partial class App : Application
     private PopupWindow? _popup;
     private MainWindow? _main;
     private Mutex? _mutex;
+    private DateTime _lastSingleClickUtc;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // 异常日志（诊断用）
+        DispatcherUnhandledException += (_, args) =>
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"),
+                    $"[{DateTime.Now:HH:mm:ss}] {args.Exception}\r\n");
+            }
+            catch { }
+            args.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            try
+            {
+                System.IO.File.AppendAllText(
+                    System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log"),
+                    $"[{DateTime.Now:HH:mm:ss}] UNHANDLED {args.ExceptionObject}\r\n");
+            }
+            catch { }
+        };
 
         // 单实例
         _mutex = new Mutex(true, "AudioControlCenter_SingleInstance", out bool createdNew);
@@ -43,6 +68,9 @@ public partial class App : Application
         _tray.TrayMouseDoubleClick += Tray_DoubleClick;
         _tray.ContextMenu = BuildContextMenu();
 
+        // 低电量通知
+        Vm.LowBatteryNotify += OnLowBatteryNotify;
+
         // 调试辅助：--show-main 启动即打开主窗口；--show-popup 启动即弹出控制中心面板
         if (e.Args.Contains("--show-main"))
             ShowMainWindow();
@@ -52,8 +80,27 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
     }
 
+    private void OnLowBatteryNotify(string mac, string name, int percent)
+    {
+        try
+        {
+            _tray?.ShowBalloonTip("蓝牙设备电量不足",
+                $"「{name}」剩余电量 {percent}%，请及时充电。",
+                BalloonIcon.Warning);
+        }
+        catch { }
+    }
+
     private void Tray_SingleClick(object sender, RoutedEventArgs e)
     {
+        // 双击防抖：350ms 内的第二次单击视为双击的一部分，交给 Tray_DoubleClick
+        var now = DateTime.UtcNow;
+        if ((now - _lastSingleClickUtc).TotalMilliseconds < 350)
+        {
+            _lastSingleClickUtc = now;
+            return;
+        }
+        _lastSingleClickUtc = now;
         ShowPopup();
     }
 

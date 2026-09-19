@@ -31,6 +31,26 @@ public sealed class BluetoothDeviceItem : ObservableObject
         set => Set(ref _isBusy, value);
     }
 
+    private int? _batteryPercent;
+    /// <summary>电池电量 0-100；null = 读不到</summary>
+    public int? BatteryPercent
+    {
+        get => _batteryPercent;
+        set
+        {
+            if (Set(ref _batteryPercent, value))
+            {
+                OnPropertyChanged(nameof(BatteryText));
+                OnPropertyChanged(nameof(HasBattery));
+                OnPropertyChanged(nameof(IsLowBattery));
+            }
+        }
+    }
+
+    public bool HasBattery => BatteryPercent.HasValue;
+    public string BatteryText => BatteryPercent.HasValue ? $"电量 {BatteryPercent}%" : "";
+    public bool IsLowBattery => BatteryPercent is <= 20;
+
     /// <summary>用于刷新连接状态的音频服务（由 ViewModel 注入）</summary>
     public AudioService? OwnerAudio { get; set; }
 
@@ -46,4 +66,31 @@ public sealed class BluetoothDeviceItem : ObservableObject
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(CanToggle));
     }
+}
+
+/// <summary>BLE 扫描发现的设备（UI 模型）</summary>
+public sealed class ScanDeviceItem : ObservableObject
+{
+    public ulong Address { get; init; }
+    public string Name { get; init; } = "";
+    public short Rssi { get; init; }
+
+    private bool _isPairing;
+    public bool IsPairing
+    {
+        get => _isPairing;
+        set => Set(ref _isPairing, value);
+    }
+
+    private bool _isPaired;
+    public bool IsPaired
+    {
+        get => _isPaired;
+        set => Set(ref _isPaired, value);
+    }
+
+    public string PairButtonText => IsPaired ? "已配对" : "配对";
+    public string MacText => Interop.BtWinrt.UlongToMac(Address);
+
+    public void RefreshPairState() => OnPropertyChanged(nameof(PairButtonText));
 }

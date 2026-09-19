@@ -124,6 +124,15 @@ internal static class Ole32Interop
     internal static extern int PropVariantClear(ref PropVariant pvar);
 }
 
+
+
+/// <summary>Shell32 P/Invoke</summary>
+internal static class Shell32Interop
+{
+    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
+    internal static extern int SHLoadIndirectString(string pszSource, System.Text.StringBuilder pszOutBuf, int cchOutBuf, IntPtr ppvReserved);
+}
+
 #endregion
 
 #region SetupAPI（枚举设备接口）

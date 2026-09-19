@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -44,4 +45,33 @@ public class InverseBoolConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => value is bool b && !b;
+}
+
+/// <summary>bool → 画刷（true=红色/强调，false=中性；parameter 可指定 "orange"）</summary>
+public class BoolToBrushConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is true)
+        {
+            var mode = parameter?.ToString() ?? "";
+            return new SolidColorBrush(mode == "orange"
+                ? Color.FromRgb(0xFF, 0x9F, 0x0A)
+                : Color.FromRgb(0xFF, 0x45, 0x3A));
+        }
+        return new SolidColorBrush(Color.FromRgb(0x8A, 0x8A, 0x92));
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>bool → Visibility（true=Visible，false=Collapsed）</summary>
+public class BoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is true ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => value is Visibility v && v == Visibility.Visible;
 }

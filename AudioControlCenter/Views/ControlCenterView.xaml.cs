@@ -29,6 +29,9 @@ public partial class ControlCenterView : UserControl
         SessionEmptyText.Visibility = Vm.Sessions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>会话列表变化时同步空状态（由定时刷新驱动）</summary>
+    public void RefreshEmptyStates() => UpdateEmptyStates();
+
     // ---------- 头部 ----------
 
     private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -45,6 +48,24 @@ public partial class ControlCenterView : UserControl
         {
             await Vm.ToggleBluetoothAsync(item);
             UpdateEmptyStates();
+        }
+    }
+
+    private void Scan_Click(object sender, RoutedEventArgs e)
+    {
+        Vm.ToggleScan();
+    }
+
+    private void ShowAll_Click(object sender, RoutedEventArgs e)
+    {
+        Vm.ShowAllBluetooth = !Vm.ShowAllBluetooth;
+    }
+
+    private async void PairScan_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ScanDeviceItem item })
+        {
+            await Vm.PairScanDeviceAsync(item);
         }
     }
 
