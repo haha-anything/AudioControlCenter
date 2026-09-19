@@ -18,18 +18,22 @@ public sealed class BluetoothService
 
     public IReadOnlyList<BluetoothDeviceItem> Devices => _items.Values.ToList();
 
-    /// <summary>刷新蓝牙设备列表（连接状态一并更新）</summary>
-    public void Refresh()
+    /// <summary>刷新蓝牙设备列表（连接状态由音频端点状态推断）</summary>
+    public void Refresh(AudioService? audio = null)
     {
         var devices = BtAudioKs.EnumerateDevices();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var dev in devices)
         {
+            // 连接状态：任一音频端点名包含设备名且为 Active
+            dev.IsConnected = audio != null && IsConnectedByName(audio, dev.Name);
+
             seen.Add(dev.Key);
             if (_items.TryGetValue(dev.Key, out var item))
             {
                 item.IsConnected = dev.IsConnected;
+                item.HasKsControl = dev.HasKsControl;
                 item.RefreshStatus();
             }
             else
@@ -39,6 +43,7 @@ public sealed class BluetoothService
                     Key = dev.Key,
                     Name = dev.Name,
                     IsConnected = dev.IsConnected,
+                    HasKsControl = dev.HasKsControl,
                     Source = dev,
                 };
             }
@@ -52,6 +57,13 @@ public sealed class BluetoothService
         DevicesChanged?.Invoke();
     }
 
+    private static bool IsConnectedByName(AudioService audio, string btName)
+    {
+        if (string.IsNullOrWhiteSpace(btName)) return false;
+        return audio.RenderDevices.Any(d => d.IsPresent && d.Name.Contains(btName, StringComparison.OrdinalIgnoreCase))
+            || audio.CaptureDevices.Any(d => d.IsPresent && d.Name.Contains(btName, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>连接或断开蓝牙设备，完成后刷新状态</summary>
     public async Task<bool> SetConnectedAsync(BluetoothDeviceItem item, bool connect)
     {
@@ -63,7 +75,10 @@ public sealed class BluetoothService
             bool ok = await Task.Run(() => BtAudioKs.SetConnected(item.Source, connect));
             // 稍等让系统完成蓝牙连接/断开
             await Task.Delay(connect ? 1200 : 400);
-            Refresh();
+            if (item.OwnerAudio != null)
+                Refresh(item.OwnerAudio);
+            else
+                Refresh();
             return ok;
         }
         finally

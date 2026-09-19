@@ -77,7 +77,7 @@ public sealed class ControlCenterViewModel : ObservableObject
         try
         {
             Audio.RefreshDevices();
-            Bluetooth.Refresh();
+            Bluetooth.Refresh(Audio);
 
             RenderDevices.Clear();
             foreach (var d in Audio.RenderDevices) RenderDevices.Add(d);
@@ -88,7 +88,11 @@ public sealed class ControlCenterViewModel : ObservableObject
             SelectedDefaultInput = CaptureDevices.FirstOrDefault(d => d.IsDefault);
 
             BluetoothDevices.Clear();
-            foreach (var b in Bluetooth.Devices) BluetoothDevices.Add(b);
+            foreach (var b in Bluetooth.Devices)
+            {
+                b.OwnerAudio = Audio;
+                BluetoothDevices.Add(b);
+            }
 
             RefreshSessionsOnly();
             StatusText = $"已刷新 · {RenderDevices.Count} 个输出 · {CaptureDevices.Count} 个输入 · {BluetoothDevices.Count} 个蓝牙设备";
@@ -123,9 +127,18 @@ public sealed class ControlCenterViewModel : ObservableObject
     /// <summary>切换蓝牙设备连接</summary>
     public async Task ToggleBluetoothAsync(BluetoothDeviceItem item)
     {
+        if (!item.HasKsControl)
+        {
+            StatusText = $"「{item.Name}」由系统（Intel 智音）管理，请在 Windows 蓝牙设置中操作";
+            return;
+        }
         await Bluetooth.SetConnectedAsync(item, !item.IsConnected);
         BluetoothDevices.Clear();
-        foreach (var b in Bluetooth.Devices) BluetoothDevices.Add(b);
+        foreach (var b in Bluetooth.Devices)
+        {
+            b.OwnerAudio = Audio;
+            BluetoothDevices.Add(b);
+        }
         // 蓝牙状态变化后音频设备也会变，刷新一下
         RefreshAll();
     }

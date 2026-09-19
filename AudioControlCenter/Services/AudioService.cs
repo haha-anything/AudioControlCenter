@@ -32,6 +32,8 @@ public sealed class AudioService : IDisposable
         RefreshSessions();
     }
 
+    private HashSet<string>? _bluetoothNames;
+
     /// <summary>刷新设备列表与默认设备</summary>
     public void RefreshDevices()
     {
@@ -40,6 +42,9 @@ public sealed class AudioService : IDisposable
 
         try
         {
+            // 蓝牙标记：按设备名匹配（MMDEVAPI 端点不含设备实例属性）
+            _bluetoothNames = BtAudioKs.GetBluetoothDeviceNames();
+
             using var enumerator = new MMDeviceEnumerator();
 
             try
@@ -73,7 +78,7 @@ public sealed class AudioService : IDisposable
             {
                 string id = dev.DeviceID;
                 bool present = dev.DeviceState == DeviceState.Active;
-                bool isBt = IsBluetoothDevice(dev);
+                bool isBt = _bluetoothNames?.Any(n => dev.FriendlyName.Contains(n, StringComparison.OrdinalIgnoreCase)) ?? false;
                 target.Add(new AudioDeviceItem
                 {
                     DeviceId = id,
@@ -85,23 +90,6 @@ public sealed class AudioService : IDisposable
                     StateText = present ? "可用" : "未连接",
                 });
             }
-        }
-    }
-
-    private static bool IsBluetoothDevice(MMDevice dev)
-    {
-        try
-        {
-            // PKEY_Device_EnumeratorName = A45C254E-DF1C-4EFD-8020-67D146A850E0 / 10
-            var key = new PropertyKey(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 10);
-            var value = dev.PropertyStore[key];
-            string? s = value.ToString();
-            return s != null && (s.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase)
-                              || s.Contains("BTHHFPENUM", StringComparison.OrdinalIgnoreCase));
-        }
-        catch
-        {
-            return dev.DeviceID.Contains("bth", StringComparison.OrdinalIgnoreCase);
         }
     }
 
