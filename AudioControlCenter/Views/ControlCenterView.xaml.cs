@@ -18,7 +18,25 @@ public partial class ControlCenterView : UserControl
         {
             App.Vm.RefreshAll();
             UpdateEmptyStates();
+            InitThemeRadio();
         };
+    }
+
+    private void InitThemeRadio()
+    {
+        var m = Vm.Settings.ThemeMode;
+        ThemeAuto.IsChecked = m == 0;
+        ThemeDark.IsChecked = m == 1;
+        ThemeLight.IsChecked = m == 2;
+    }
+
+    private void ThemeMode_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        int mode = ThemeAuto.IsChecked == true ? 0 : ThemeDark.IsChecked == true ? 1 : 2;
+        Vm.Settings.ThemeMode = mode;
+        Vm.Settings.Save();
+        App.ApplyTheme(mode);
     }
 
     private ControlCenterViewModel Vm => App.Vm;

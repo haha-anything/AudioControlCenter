@@ -48,6 +48,9 @@ public partial class App : Application
             catch { }
         };
 
+        // 应用主题（0=跟随系统 1=深色 2=浅色）
+        ApplyTheme(Vm.Settings.ThemeMode);
+
         // 单实例
         _mutex = new Mutex(true, "AudioControlCenter_SingleInstance", out bool createdNew);
         if (!createdNew)
@@ -163,6 +166,31 @@ public partial class App : Application
         _popup?.Close();
         _main?.Close();
         Shutdown();
+    }
+
+    /// <summary>切换主题：0=跟随系统 1=深色 2=浅色</summary>
+    public static void ApplyTheme(int mode)
+    {
+        try
+        {
+            if (mode == 0)
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                var v = key?.GetValue("AppsUseLightTheme");
+                mode = (v is int i && i == 1) ? 2 : 1;
+            }
+            var uri = mode == 2
+                ? new Uri("Themes/Light.xaml", UriKind.Relative)
+                : new Uri("Themes/Dark.xaml", UriKind.Relative);
+            var dic = new ResourceDictionary { Source = uri };
+            var appDict = Current.Resources;
+            if (appDict.MergedDictionaries.Count > 0)
+                appDict.MergedDictionaries[0] = dic;
+            else
+                appDict.MergedDictionaries.Add(dic);
+        }
+        catch { }
     }
 
     protected override void OnExit(ExitEventArgs e)

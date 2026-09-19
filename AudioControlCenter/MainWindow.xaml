@@ -3,12 +3,36 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:AudioControlCenter.Views"
         Title="音频控制中心"
-        Height="760" Width="680"
-        MinHeight="520" MinWidth="640"
-        Background="#1F1F23"
+        Width="920" Height="700"
+        MinHeight="600" MinWidth="820"
+        Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing">
     <Grid>
-        <views:ControlCenterView/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧导航栏 -->
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}">
+            <DockPanel Margin="0,18,0,12">
+                <TextBlock DockPanel.Dock="Top" Text="音频控制中心" FontSize="17" FontWeight="Bold"
+                           Foreground="{DynamicResource TextBrush}" Margin="16,0,0,22"/>
+                <StackPanel>
+                    <RadioButton Content="🏠  首页" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+                                 IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=0, Mode=TwoWay}"/>
+                    <RadioButton Content="🎚️  音频" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+                                 IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=1, Mode=TwoWay}"/>
+                    <RadioButton Content="📶  蓝牙" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+                                 IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=2, Mode=TwoWay}"/>
+                    <RadioButton Content="⚙️  设置" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+                                 IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=3, Mode=TwoWay}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 右侧内容区 -->
+        <views:ControlCenterView Grid.Column="1"/>
     </Grid>
 </Window>

@@ -19,6 +19,8 @@ public sealed class ControlCenterViewModel : ObservableObject
     public ObservableCollection<ScanDeviceItem> ScanResults { get; } = new();
     public ObservableCollection<AudioDeviceItem> RenderDevices { get; } = new();
     public ObservableCollection<AudioDeviceItem> CaptureDevices { get; } = new();
+    public ObservableCollection<BluetoothDeviceItem> ConnectedBluetoothDevices { get; } = new();
+    public bool NoConnectedBluetooth => ConnectedBluetoothDevices.Count == 0;
 
     private readonly DispatcherTimer _sessionTimer;
     private readonly DispatcherTimer _batteryTimer;
@@ -79,6 +81,14 @@ public sealed class ControlCenterViewModel : ObservableObject
 
     public string ShowAllButtonText => ShowAllBluetooth ? "收起" : "查看全部";
     public bool ShowAllButtonVisibility => BluetoothDevices.Count > 3;
+
+    private int _selectedTab = 0;
+    /// <summary>左侧导航：0=首页 1=音频 2=蓝牙 3=设置</summary>
+    public int SelectedTab
+    {
+        get => _selectedTab;
+        set => Set(ref _selectedTab, value);
+    }
 
     private int _loading; // 加载期间禁止触发 setter 副作用
 
@@ -142,6 +152,9 @@ public sealed class ControlCenterViewModel : ObservableObject
                 b.OwnerAudio = Audio;
                 BluetoothDevices.Add(b);
             }
+            ConnectedBluetoothDevices.Clear();
+            foreach (var b in BluetoothDevices.Where(x => x.IsConnected)) ConnectedBluetoothDevices.Add(b);
+            OnPropertyChanged(nameof(NoConnectedBluetooth));
             OnPropertyChanged(nameof(VisibleBluetoothDevices));
             OnPropertyChanged(nameof(ShowAllButtonVisibility));
 

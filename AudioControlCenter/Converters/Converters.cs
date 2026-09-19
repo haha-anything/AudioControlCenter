@@ -75,3 +75,35 @@ public class BoolToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => value is Visibility v && v == Visibility.Visible;
 }
+
+/// <summary>导航 Tab：SelectedTab == parameter 时 Visible（parameter 为 "0"/"1"/"2"/"3"）</summary>
+public class TabVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int tab && parameter is string s && int.TryParse(s, out var target))
+            return tab == target ? Visibility.Visible : Visibility.Collapsed;
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>导航 RadioButton：SelectedTab == parameter 时 IsChecked</summary>
+public class TabCheckedConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int tab && parameter is string s && int.TryParse(s, out var target))
+            return tab == target;
+        return false;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        // RadioButton 点击 → 切换到对应 tab
+        if (parameter is string s && int.TryParse(s, out var target)) return target;
+        return 0;
+    }
+}

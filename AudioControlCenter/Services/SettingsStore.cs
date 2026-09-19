@@ -24,6 +24,9 @@ public sealed class SettingsStore
 
         /// <summary>蓝牙 MAC → 已通知低电量值（避免重复提醒）</summary>
         public Dictionary<string, int> BatteryLowNotified { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>主题：0=跟随系统 1=深色 2=浅色</summary>
+        public int ThemeMode { get; set; } = 0;
     }
 
     public SettingsStore(string? path = null)
@@ -62,6 +65,13 @@ public sealed class SettingsStore
 
     public float? GetVolume(string processName)
         => _data.VolumeByApp.TryGetValue(processName, out var v) ? v : null;
+
+    /// <summary>主题：0=跟随系统 1=深色 2=浅色</summary>
+    public int ThemeMode
+    {
+        get => _data.ThemeMode;
+        set { _data.ThemeMode = value; Save(); }
+    }
 
     public void SetVolume(string processName, float volume)
     {

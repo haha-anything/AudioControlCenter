@@ -103,7 +103,16 @@ public sealed class AudioService : IDisposable
     /// <summary>刷新应用会话（按进程合并渲染/采集会话）</summary>
     public void RefreshSessions()
     {
+        List<AppSessionItem> result;
+        try { result = System.Threading.Tasks.Task.Run(CollectSessions).GetAwaiter().GetResult(); }
+        catch { result = new List<AppSessionItem>(); }
         Sessions.Clear();
+        foreach (var item in result) Sessions.Add(item);
+    }
+
+    private static List<AppSessionItem> CollectSessions()
+    {
+        var list = new List<AppSessionItem>();
 
         var sessionsByPid = new Dictionary<uint,
             (string RenderDevId, string RenderDevName, AudioSessionControl2? RenderSession,
@@ -175,7 +184,7 @@ public sealed class AudioService : IDisposable
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"RefreshSessions failed: {ex}");
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diag.log"), $"[{DateTime.Now:HH:mm:ss}] RefreshSessions ex: {ex}" + Environment.NewLine); } catch { }
         }
 
         // 3) 构建 UI 模型
@@ -223,17 +232,19 @@ public sealed class AudioService : IDisposable
             item.PersistedOutputDeviceId = AudioPolicy.GetProcessDefaultEndpoint(kv.Key, EDataFlow.eRender);
             item.PersistedInputDeviceId = AudioPolicy.GetProcessDefaultEndpoint(kv.Key, EDataFlow.eCapture);
 
-            Sessions.Add(item);
+            list.Add(item);
         }
 
+        try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diag.log"), $"[{DateTime.Now:HH:mm:ss}] RefreshSessions done: byPid={sessionsByPid.Count}, list={list.Count}" + Environment.NewLine); } catch { }
         // 释放持有中的会话对象
         foreach (var kv in sessionsByPid.Values)
             kv.RenderSession?.Dispose();
+        return list;
     }
 
     private static AudioSessionManager2? GetSessionManager(MMDevice dev)
     {
-        try { return AudioSessionManager2.FromMMDevice(dev); } catch { return null; }
+        try { return AudioSessionManager2.FromMMDevice(dev); } catch (Exception ex) { try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diag.log"), "FromMMDevice fail: " + ex.GetType().Name + " " + ex.Message + Environment.NewLine); } catch { } return null; }
     }
 
     private static string GetProcessName(uint pid)

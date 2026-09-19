@@ -79,6 +79,34 @@ public static class BtWinrt
         return null;
     }
 
+    /// <summary>枚举所有经典蓝牙已配对设备的电量（名称→百分比），走 HFP HF Indicator</summary>
+    public static async System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, int>> ReadAllClassicBatteryAsync()
+    {
+        var result = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var selector = BluetoothDevice.GetDeviceSelector();
+            var devices = await DeviceInformation.FindAllAsync(selector);
+            foreach (var d in devices)
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(d.Name)) continue;
+                    if (d.Properties != null &&
+                        d.Properties.TryGetValue("System.Devices.Bluetooth.DeviceBatteryLevel", out var v) &&
+                        v != null)
+                    {
+                        int pct = Convert.ToInt32(v);
+                        if (pct >= 0 && pct <= 100) result[d.Name] = pct;
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
+        return result;
+    }
+
     /// <summary>配对 BLE 设备（系统级配对）</summary>
     public static async Task<bool> PairAsync(ulong address)
     {
