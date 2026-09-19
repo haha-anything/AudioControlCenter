@@ -1,0 +1,18 @@
+# Build results
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Reference source clones (EarTrumpet/ToothTray/cscore)
+.ref/
+
+# Local settings (device preferences, credentials)
+*.local.json
+settings.json
+
+# Misc
+*.log
+Thumbs.db
+Desktop.ini

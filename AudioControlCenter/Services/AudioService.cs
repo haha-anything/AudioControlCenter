@@ -1,0 +1,375 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using AudioControlCenter.Interop;
+using AudioControlCenter.Models;
+using CSCore;
+using CSCore.CoreAudioAPI;
+using CSCore.Win32;
+
+namespace AudioControlCenter.Services;
+
+/// <summary>
+/// 音频核心服务：枚举设备与会话、全局默认设备切换、分应用设备切换（套壳 EarTrumpet 的
+/// AudioPolicyConfig + CSCore 会话枚举）。
+/// </summary>
+public sealed class AudioService : IDisposable
+{
+    /// <summary>系统默认输出设备 id</summary>
+    public string? DefaultOutputId { get; private set; }
+    /// <summary>系统默认输入设备 id</summary>
+    public string? DefaultInputId { get; private set; }
+
+    public List<AudioDeviceItem> RenderDevices { get; } = new();
+    public List<AudioDeviceItem> CaptureDevices { get; } = new();
+    public List<AppSessionItem> Sessions { get; } = new();
+
+    /// <summary>完整刷新：设备 + 会话</summary>
+    public void RefreshAll()
+    {
+        RefreshDevices();
+        RefreshSessions();
+    }
+
+    /// <summary>刷新设备列表与默认设备</summary>
+    public void RefreshDevices()
+    {
+        RenderDevices.Clear();
+        CaptureDevices.Clear();
+
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+
+            try
+            {
+                using var defOut = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                DefaultOutputId = defOut?.DeviceID;
+            }
+            catch { DefaultOutputId = null; }
+            try
+            {
+                using var defIn = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+                DefaultInputId = defIn?.DeviceID;
+            }
+            catch { DefaultInputId = null; }
+
+            FillDevices(enumerator, DataFlow.Render, RenderDevices, DefaultOutputId);
+            FillDevices(enumerator, DataFlow.Capture, CaptureDevices, DefaultInputId);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"RefreshDevices failed: {ex}");
+        }
+    }
+
+    private void FillDevices(MMDeviceEnumerator enumerator, DataFlow flow, List<AudioDeviceItem> target, string? defaultId)
+    {
+        using var collection = enumerator.EnumAudioEndpoints(flow, DeviceState.Active | DeviceState.UnPlugged);
+        foreach (var dev in collection)
+        {
+            using (dev)
+            {
+                string id = dev.DeviceID;
+                bool present = dev.DeviceState == DeviceState.Active;
+                bool isBt = IsBluetoothDevice(dev);
+                target.Add(new AudioDeviceItem
+                {
+                    DeviceId = id,
+                    Name = dev.FriendlyName,
+                    Kind = flow == DataFlow.Render ? EDataFlowKind.Render : EDataFlowKind.Capture,
+                    IsBluetooth = isBt,
+                    IsDefault = string.Equals(id, defaultId, StringComparison.OrdinalIgnoreCase),
+                    IsPresent = present,
+                    StateText = present ? "可用" : "未连接",
+                });
+            }
+        }
+    }
+
+    private static bool IsBluetoothDevice(MMDevice dev)
+    {
+        try
+        {
+            // PKEY_Device_EnumeratorName = A45C254E-DF1C-4EFD-8020-67D146A850E0 / 10
+            var key = new PropertyKey(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 10);
+            var value = dev.PropertyStore[key];
+            string? s = value.ToString();
+            return s != null && (s.Contains("BTHENUM", StringComparison.OrdinalIgnoreCase)
+                              || s.Contains("BTHHFPENUM", StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return dev.DeviceID.Contains("bth", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>刷新应用会话（按进程合并渲染/采集会话）</summary>
+    public void RefreshSessions()
+    {
+        Sessions.Clear();
+
+        var sessionsByPid = new Dictionary<uint, (MMDevice renderDev, AudioSessionControl2? renderSession, MMDevice? captureDev)>();
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            using var renderCol = enumerator.EnumAudioEndpoints(DataFlow.Render, DeviceState.Active);
+            using var captureCol = enumerator.EnumAudioEndpoints(DataFlow.Capture, DeviceState.Active);
+
+            // 1) 渲染设备的会话
+            foreach (var dev in renderCol)
+            {
+                using (dev)
+                {
+                    using var mgr = GetSessionManager(dev);
+                    if (mgr == null) continue;
+                    using var sessions = mgr.GetSessionEnumerator();
+                    for (int i = 0; i < sessions.Count; i++)
+                    {
+                        using var session = sessions[i];
+                        if (session is not AudioSessionControl2 s2) continue;
+                        try
+                        {
+                            uint pid = (uint)s2.ProcessID;
+                            if (pid == 0) continue;
+                            if (!sessionsByPid.TryGetValue(pid, out var entry))
+                                entry = (dev, s2, null);
+                            else
+                                entry.renderSession?.Dispose();
+                            // 让 s2 脱离 using 生命周期（转由字典持有）
+                            GC.SuppressFinalize(s2);
+                            sessionsByPid[pid] = (entry.renderDev, s2, entry.captureDev);
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            // 2) 采集设备的会话（用于匹配输入设备）
+            foreach (var dev in captureCol)
+            {
+                using (dev)
+                {
+                    using var mgr = GetSessionManager(dev);
+                    if (mgr == null) continue;
+                    using var sessions = mgr.GetSessionEnumerator();
+                    for (int i = 0; i < sessions.Count; i++)
+                    {
+                        using var session = sessions[i];
+                        if (session is not AudioSessionControl2 s2) continue;
+                        try
+                        {
+                            uint pid = (uint)s2.ProcessID;
+                            if (pid == 0) continue;
+                            if (sessionsByPid.TryGetValue(pid, out var entry))
+                                sessionsByPid[pid] = (entry.renderDev, entry.renderSession, dev);
+                        }
+                        catch { }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"RefreshSessions failed: {ex}");
+        }
+
+        // 3) 构建 UI 模型
+        foreach (var kv in sessionsByPid.OrderBy(k => GetProcessName(k.Key)))
+        {
+            var (renderDev, renderSession, captureDev) = kv.Value;
+            if (renderSession == null && captureDev == null) continue;
+
+            var item = new AppSessionItem
+            {
+                ProcessId = kv.Key,
+                ProcessName = GetProcessName(kv.Key),
+                DisplayName = GetDisplayName(renderSession, kv.Key),
+                IconPath = GetIconPath(kv.Key),
+            };
+
+            if (renderSession != null)
+            {
+                using var volume = renderSession.QueryInterface<SimpleAudioVolume>();
+                if (volume != null)
+                {
+                    item.Volume = volume.MasterVolume;
+                    item.IsMuted = volume.IsMuted;
+                }
+                item.CurrentOutputDeviceId = renderDev.DeviceID;
+                item.CurrentOutputDeviceName = renderDev.FriendlyName;
+            }
+            else
+            {
+                item.CurrentOutputDeviceId = "";
+                item.CurrentOutputDeviceName = "（无输出）";
+            }
+
+            if (captureDev != null)
+            {
+                item.CurrentInputDeviceId = captureDev.DeviceID;
+                item.CurrentInputDeviceName = captureDev.FriendlyName;
+            }
+            else
+            {
+                item.CurrentInputDeviceId = "";
+                item.CurrentInputDeviceName = "（无输入）";
+            }
+
+            item.PersistedOutputDeviceId = AudioPolicy.GetProcessDefaultEndpoint(kv.Key, EDataFlow.eRender);
+            item.PersistedInputDeviceId = AudioPolicy.GetProcessDefaultEndpoint(kv.Key, EDataFlow.eCapture);
+
+            Sessions.Add(item);
+        }
+
+        // 释放持有中的会话对象
+        foreach (var kv in sessionsByPid.Values)
+            kv.renderSession?.Dispose();
+    }
+
+    private static AudioSessionManager2? GetSessionManager(MMDevice dev)
+    {
+        try { return AudioSessionManager2.FromMMDevice(dev); } catch { return null; }
+    }
+
+    private static string GetProcessName(uint pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById((int)pid);
+            return p.ProcessName;
+        }
+        catch { return pid.ToString(); }
+    }
+
+    private static string? GetDisplayName(AudioSessionControl2? session, uint pid)
+    {
+        if (session != null)
+        {
+            try
+            {
+                var n = session.DisplayName;
+                if (!string.IsNullOrWhiteSpace(n)) return n;
+            }
+            catch { }
+        }
+        return GetProcessName(pid);
+    }
+
+    private static string? GetIconPath(uint pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById((int)pid);
+            if (p == null || p.MainModule == null) return null;
+            return p.MainModule.FileName;
+        }
+        catch { return null; }
+    }
+
+    // ---------- 操作 ----------
+
+    /// <summary>设置全局默认输出设备</summary>
+    public bool SetGlobalDefaultOutput(string deviceId)
+        => AudioPolicy.SetGlobalDefaultEndpoint(deviceId, EDataFlow.eRender);
+
+    /// <summary>设置全局默认输入设备</summary>
+    public bool SetGlobalDefaultInput(string deviceId)
+        => AudioPolicy.SetGlobalDefaultEndpoint(deviceId, EDataFlow.eCapture);
+
+    /// <summary>为应用设置输出设备（系统持久化）</summary>
+    public bool SetSessionOutput(AppSessionItem session, string deviceId)
+    {
+        if (!AudioPolicy.SetProcessDefaultEndpoint(session.ProcessId, EDataFlow.eRender, deviceId))
+            return false;
+        session.PersistedOutputDeviceId = deviceId;
+        session.RefreshFollowState();
+        return true;
+    }
+
+    /// <summary>为应用设置输入设备（系统持久化）</summary>
+    public bool SetSessionInput(AppSessionItem session, string deviceId)
+    {
+        if (!AudioPolicy.SetProcessDefaultEndpoint(session.ProcessId, EDataFlow.eCapture, deviceId))
+            return false;
+        session.PersistedInputDeviceId = deviceId;
+        session.RefreshFollowState();
+        return true;
+    }
+
+    /// <summary>静默清除进程默认端点（供 UI 直接改模型场景）</summary>
+    public void ClearProcessDefaultEndpointQuiet(uint processId, Models.EDataFlowKind kind)
+    {
+        AudioPolicy.ClearProcessDefaultEndpoint(
+            processId,
+            kind == Models.EDataFlowKind.Render ? EDataFlow.eRender : EDataFlow.eCapture);
+    }
+
+    /// <summary>应用恢复为跟随全局默认（清除输出+输入覆盖）</summary>
+    public void ResetSessionToDefault(AppSessionItem session)
+    {
+        AudioPolicy.ClearProcessDefaultEndpoint(session.ProcessId, EDataFlow.eRender);
+        AudioPolicy.ClearProcessDefaultEndpoint(session.ProcessId, EDataFlow.eCapture);
+        session.PersistedOutputDeviceId = null;
+        session.PersistedInputDeviceId = null;
+        session.RefreshFollowState();
+    }
+
+    /// <summary>设置应用会话音量（0-1）</summary>
+    public void SetSessionVolume(AppSessionItem session, float volume)
+    {
+        try
+        {
+            SetVolumeForPid(session.ProcessId, volume, null);
+            session.Volume = volume;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"SetSessionVolume failed: {ex}");
+        }
+    }
+
+    /// <summary>切换应用静音</summary>
+    public void SetSessionMute(AppSessionItem session, bool muted)
+    {
+        try
+        {
+            SetVolumeForPid(session.ProcessId, null, muted);
+            session.IsMuted = muted;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"SetSessionMute failed: {ex}");
+        }
+    }
+
+    private static void SetVolumeForPid(uint pid, float? volume, bool? muted)
+    {
+        using var enumerator = new MMDeviceEnumerator();
+        using var col = enumerator.EnumAudioEndpoints(DataFlow.Render, DeviceState.Active);
+        foreach (var dev in col)
+        {
+            using (dev)
+            {
+                using var mgr = GetSessionManager(dev);
+                if (mgr == null) continue;
+                using var sessions = mgr.GetSessionEnumerator();
+                for (int i = 0; i < sessions.Count; i++)
+                {
+                    using var session = sessions[i];
+                    if (session is not AudioSessionControl2 s2) continue;
+                    if ((uint)s2.ProcessID != pid) continue;
+                    using var vol = session.QueryInterface<SimpleAudioVolume>();
+                    if (vol == null) continue;
+                    if (volume is float v) vol.MasterVolume = v;
+                    if (muted is bool m) vol.IsMuted = m;
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+    }
+}
