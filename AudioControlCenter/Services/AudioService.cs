@@ -352,7 +352,7 @@ public sealed class AudioService : IDisposable
     {
         try
         {
-            SetVolumeForPid(session.ProcessId, volume, null);
+            System.Threading.Tasks.Task.Run(() => SetVolumeForPid(session.ProcessId, volume, null)).Wait(1000);
             session.Volume = volume;
         }
         catch (Exception ex)
@@ -366,7 +366,7 @@ public sealed class AudioService : IDisposable
     {
         try
         {
-            SetVolumeForPid(session.ProcessId, null, muted);
+            System.Threading.Tasks.Task.Run(() => SetVolumeForPid(session.ProcessId, null, muted)).Wait(1000);
             session.IsMuted = muted;
         }
         catch (Exception ex)
@@ -392,6 +392,7 @@ public sealed class AudioService : IDisposable
                     var s2 = session.QueryInterface<AudioSessionControl2>();
                     if (s2 == null) continue;
                     if ((uint)s2.ProcessID != pid) continue;
+                    try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "diag.log"), "  session pid=" + s2.ProcessID + " want=" + pid + " name=" + s2.DisplayName + "\r\n"); } catch { }
                     try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "diag.log"), "SetVolume pid=" + pid + " name=" + s2.DisplayName + "\r\n"); } catch { }
                     using var vol = session.QueryInterface<SimpleAudioVolume>();
                     if (vol == null) continue;
