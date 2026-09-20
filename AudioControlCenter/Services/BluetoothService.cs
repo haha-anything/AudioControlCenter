@@ -125,6 +125,7 @@ public sealed class BluetoothService : IDisposable
             try { classic = await BtWinrt.ReadAllClassicBatteryAsync(); } catch { }
             var power = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             try { power = await BtWinrt.ReadBatteryViaPowerApiAsync(); } catch { }
+            try { await BtWinrt.DumpBluetoothPropertiesAsync(); } catch { }
 
             foreach (var item in _items.Values.ToList())
             {

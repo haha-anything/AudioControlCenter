@@ -144,6 +144,43 @@ public static class BtWinrt
         }
         return result;
     }
+    /// <summary>调试：枚举所有蓝牙设备，转储 DeviceInformation.Properties 找电池相关属性</summary>
+    public static async System.Threading.Tasks.Task DumpBluetoothPropertiesAsync()
+    {
+        try
+        {
+            var selector = BluetoothDevice.GetDeviceSelector();
+            var devices = await DeviceInformation.FindAllAsync(selector);
+            var dbg = new System.Text.StringBuilder();
+            dbg.AppendLine($"Dump: {devices.Count} bluetooth devices");
+            foreach (var d in devices)
+            {
+                if (d.Name == null || !d.Name.Contains("XB100", StringComparison.OrdinalIgnoreCase)) continue;
+                dbg.AppendLine($"=== {d.Name} Id={d.Id} ===");
+                try
+                {
+                    var bt = await BluetoothDevice.FromIdAsync(d.Id);
+                    if (bt != null)
+                    {
+                        dbg.AppendLine($"  BluetoothDevice properties:");
+                        foreach (var kv in bt.DeviceInformation.Properties)
+                        {
+                            var val = kv.Value;
+                            string vs = val?.ToString() ?? "null";
+                            if (vs.Length > 80) vs = vs.Substring(0, 80);
+                            dbg.AppendLine($"    {kv.Key} = {vs}");
+                        }
+                    }
+                }
+                catch (Exception ex) { dbg.AppendLine($"  err: {ex.Message}"); }
+            }
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), dbg.ToString());
+        }
+        catch (Exception ex)
+        {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "battery_debug.log"), $"Dump error: {ex.Message}\n");
+        }
+    }
     /// <summary>配对 BLE 设备（系统级配对）</summary>
     public static async Task<bool> PairAsync(ulong address)
     {
