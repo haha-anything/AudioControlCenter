@@ -184,19 +184,19 @@
                             <Grid VerticalAlignment="Center">
                                 <Track x:Name="PART_Track" VerticalAlignment="Center" Height="6">
                                     <Track.DecreaseRepeatButton>
-                                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False" Opacity="1">
+                                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Focusable="False" Opacity="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                             <RepeatButton.Template>
                                                 <ControlTemplate TargetType="RepeatButton">
-                                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="3"/>
+                                                    <Border Background="{DynamicResource AccentBrush}" CornerRadius="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                                                 </ControlTemplate>
                                             </RepeatButton.Template>
                                         </RepeatButton>
                                     </Track.DecreaseRepeatButton>
                                     <Track.IncreaseRepeatButton>
-                                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False" Opacity="1">
+                                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Focusable="False" Opacity="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                             <RepeatButton.Template>
                                                 <ControlTemplate TargetType="RepeatButton">
-                                                    <Border Background="{DynamicResource SliderTrackBrush}" CornerRadius="3"/>
+                                                    <Border Background="{DynamicResource SliderTrackBrush}" CornerRadius="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                                                 </ControlTemplate>
                                             </RepeatButton.Template>
                                         </RepeatButton>

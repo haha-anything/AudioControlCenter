@@ -126,6 +126,7 @@ public sealed class ControlCenterViewModel : ObservableObject
     {
         try
         {
+            Audio.RefreshDevices();
             Bluetooth.Refresh(Audio);
             for (int i = 0; i < BluetoothDevices.Count; i++)
             {

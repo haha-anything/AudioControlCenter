@@ -260,7 +260,10 @@
                             <ItemsControl ItemsSource="{Binding Sessions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding DisplayName}" FontSize="17" Margin="0,2"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,3">
+                                            <Image Source="{Binding IconPath}" Width="20" Height="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="17" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

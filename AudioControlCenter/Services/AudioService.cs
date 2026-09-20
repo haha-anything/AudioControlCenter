@@ -392,6 +392,7 @@ public sealed class AudioService : IDisposable
                     var s2 = session.QueryInterface<AudioSessionControl2>();
                     if (s2 == null) continue;
                     if ((uint)s2.ProcessID != pid) continue;
+                    try { System.IO.File.AppendAllText(System.IO.Path.Combine(System.AppContext.BaseDirectory, "diag.log"), "SetVolume pid=" + pid + " name=" + s2.DisplayName + "\r\n"); } catch { }
                     using var vol = session.QueryInterface<SimpleAudioVolume>();
                     if (vol == null) continue;
                     if (volume is float v) vol.MasterVolume = v;

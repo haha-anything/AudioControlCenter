@@ -50,6 +50,11 @@ public partial class App : Application
 
         // 应用主题（0=跟随系统 1=深色 2=浅色）
         ApplyTheme(Vm.Settings.ThemeMode);
+        // 监听系统主题变化（跟随系统模式下自动切换）
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += (s, e) =>
+        {
+            if (Vm.Settings.ThemeMode == 0) ApplyTheme(0);
+        };
 
         // 单实例
         _mutex = new Mutex(true, "AudioControlCenter_SingleInstance", out bool createdNew);
