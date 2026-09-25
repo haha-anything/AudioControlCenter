@@ -1,11 +1,11 @@
 using System;
 using System.Threading;
 using System.Windows;
-using AudioControlCenter.Services;
-using AudioControlCenter.Views;
+using BTAudioSwitcher.Services;
+using BTAudioSwitcher.Views;
 using Hardcodet.Wpf.TaskbarNotification;
 
-namespace AudioControlCenter;
+namespace BTAudioSwitcher;
 
 public partial class App : Application
 {
@@ -57,10 +57,10 @@ public partial class App : Application
         };
 
         // 单实例
-        _mutex = new Mutex(true, "AudioControlCenter_SingleInstance", out bool createdNew);
+        _mutex = new Mutex(true, "BT_Audio_Switcher_SingleInstance", out bool createdNew);
         if (!createdNew)
         {
-            MessageBox.Show("音频控制中心已在运行，请查看托盘图标。", "音频控制中心",
+            MessageBox.Show("BT Audio Switcher 已在运行，请查看托盘图标。", "BT Audio Switcher",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
@@ -70,7 +70,7 @@ public partial class App : Application
         _tray = new TaskbarIcon
         {
             Icon = TrayIconFactory.Create(),
-            ToolTipText = "音频控制中心",
+            ToolTipText = "BT Audio Switcher",
         };
         _tray.TrayLeftMouseUp += Tray_SingleClick;
         _tray.TrayMouseDoubleClick += Tray_DoubleClick;

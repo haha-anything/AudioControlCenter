@@ -9,7 +9,7 @@ using Windows.Devices.Power;
 using Windows.Foundation;
 using Windows.Storage.Streams;
 
-namespace AudioControlCenter.Interop;
+namespace BTAudioSwitcher.Interop;
 
 /// <summary>BLE 扫描发现到的设备</summary>
 public sealed class BleScanResult

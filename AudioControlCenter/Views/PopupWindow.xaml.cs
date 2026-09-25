@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace AudioControlCenter.Views;
+namespace BTAudioSwitcher.Views;
 
 public partial class PopupWindow : Window
 {

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AssemblyName>BT-Audio-Switcher</AssemblyName>
+    <RootNamespace>BTAudioSwitcher</RootNamespace>
+    <Product>BT Audio Switcher</Product>
+    <AssemblyTitle>BT Audio Switcher</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>

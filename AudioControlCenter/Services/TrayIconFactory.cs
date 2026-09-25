@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 
-namespace AudioControlCenter.Services;
+namespace BTAudioSwitcher.Services;
 
 /// <summary>托盘图标工厂：程序内绘制（蓝色圆角方块 + 白色声波）</summary>
 internal static class TrayIconFactory

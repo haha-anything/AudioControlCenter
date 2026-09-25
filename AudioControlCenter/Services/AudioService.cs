@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using AudioControlCenter.Interop;
-using AudioControlCenter.Models;
+using BTAudioSwitcher.Interop;
+using BTAudioSwitcher.Models;
 using CSCore;
 using CSCore.CoreAudioAPI;
 using CSCore.Win32;
 
-namespace AudioControlCenter.Services;
+namespace BTAudioSwitcher.Services;
 
 /// <summary>
 /// 音频核心服务：枚举设备与会话、全局默认设备切换、分应用设备切换（套壳 EarTrumpet 的

@@ -3,9 +3,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using AudioControlCenter.Models;
+using BTAudioSwitcher.Models;
 
-namespace AudioControlCenter.Services;
+namespace BTAudioSwitcher.Services;
 
 /// <summary>控制中心视图模型：聚合音频 + 蓝牙 + 记忆服务 + 实时监测</summary>
 public sealed class ControlCenterViewModel : ObservableObject

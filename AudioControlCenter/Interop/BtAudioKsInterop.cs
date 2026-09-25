@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
-namespace AudioControlCenter.Interop;
+namespace BTAudioSwitcher.Interop;
 
 #region COM 接口定义
 

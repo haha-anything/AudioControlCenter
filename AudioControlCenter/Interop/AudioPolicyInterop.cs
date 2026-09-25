@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace AudioControlCenter.Interop;
+namespace BTAudioSwitcher.Interop;
 
 /// <summary>音频数据流方向（对应 EDataFlow）</summary>
 public enum EDataFlow

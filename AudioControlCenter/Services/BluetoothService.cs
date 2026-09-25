@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AudioControlCenter.Interop;
-using AudioControlCenter.Models;
+using BTAudioSwitcher.Interop;
+using BTAudioSwitcher.Models;
 
-namespace AudioControlCenter.Services;
+namespace BTAudioSwitcher.Services;
 
 /// <summary>
 /// 蓝牙服务：枚举蓝牙音频设备、连接/断开（套壳 ToothTray / yasb 的 KS 方案）、

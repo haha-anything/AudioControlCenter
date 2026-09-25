@@ -1,6 +1,6 @@
-using AudioControlCenter.Services;
+using BTAudioSwitcher.Services;
 
-namespace AudioControlCenter.Models;
+namespace BTAudioSwitcher.Models;
 
 /// <summary>应用音频会话（系统音量合成器中的一条）</summary>
 public sealed class AppSessionItem : ObservableObject

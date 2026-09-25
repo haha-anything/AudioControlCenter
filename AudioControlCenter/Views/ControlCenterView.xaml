@@ -1,7 +1,7 @@
-<UserControl x:Class="AudioControlCenter.Views.ControlCenterView"
+<UserControl x:Class="BTAudioSwitcher.Views.ControlCenterView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:models="clr-namespace:AudioControlCenter.Models"
+             xmlns:models="clr-namespace:BTAudioSwitcher.Models"
              MinWidth="560">
     <UserControl.Resources>
 
@@ -409,7 +409,7 @@
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Text="关于" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="音频控制中心 V3 · 托盘常驻，一键切换蓝牙与分应用音频"
+                            <TextBlock Text="BT Audio Switcher V3 · 托盘常驻，一键切换蓝牙与分应用音频"
                                        Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17"/>
                             <TextBlock Text="托盘：单击=控制中心面板，双击=主窗口，右键=刷新/退出"
                                        Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="0,6,0,0"/>

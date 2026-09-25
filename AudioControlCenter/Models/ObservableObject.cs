@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace AudioControlCenter.Models;
+namespace BTAudioSwitcher.Models;
 
 /// <summary>INotifyPropertyChanged 基类</summary>
 public abstract class ObservableObject : INotifyPropertyChanged

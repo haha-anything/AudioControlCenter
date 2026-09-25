@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
-namespace AudioControlCenter.Services;
+namespace BTAudioSwitcher.Services;
 
 /// <summary>
 /// 本地记忆存储（JSON）。记录每个应用的自定义音量等偏好，
@@ -39,7 +39,7 @@ public sealed class SettingsStore
     {
         _path = path ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AudioControlCenter", "settings.json");
+            "BT-Audio-Switcher", "settings.json");
     }
 
     public void Load()
@@ -50,6 +50,21 @@ public sealed class SettingsStore
             {
                 var json = File.ReadAllText(_path);
                 _data = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            else
+            {
+                // 迁移：从旧目录名 AudioControlCenter 复制旧设置
+                var oldPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "AudioControlCenter", "settings.json");
+                if (File.Exists(oldPath))
+                {
+                    var json = File.ReadAllText(oldPath);
+                    _data = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    var dir = Path.GetDirectoryName(_path);
+                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    File.Copy(oldPath, _path, true);
+                }
             }
         }
         catch
@@ -99,7 +114,7 @@ public sealed class SettingsStore
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Run", true);
             if (key == null) return;
-            const string name = "AudioControlCenter";
+            const string name = "BT-Audio-Switcher";
             if (_data.AutoStart)
                 key.SetValue(name, $"\"{Environment.ProcessPath}\"");
             else

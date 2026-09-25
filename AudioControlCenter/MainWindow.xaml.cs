@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Windows;
-using AudioControlCenter.Services;
+using BTAudioSwitcher.Services;
 
-namespace AudioControlCenter;
+namespace BTAudioSwitcher;
 
 public partial class MainWindow : Window
 {

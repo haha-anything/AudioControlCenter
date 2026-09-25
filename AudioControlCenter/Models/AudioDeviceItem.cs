@@ -1,4 +1,4 @@
-namespace AudioControlCenter.Models;
+namespace BTAudioSwitcher.Models;
 
 /// <summary>音频设备（输出/输入端点）</summary>
 public sealed class AudioDeviceItem : ObservableObject

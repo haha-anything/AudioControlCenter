@@ -6,7 +6,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace AudioControlCenter.Converters;
+namespace BTAudioSwitcher.Converters;
 
 /// <summary>exe 路径 → 应用图标（提取关联图标）</summary>
 public class IconConverter : IMultiValueConverter

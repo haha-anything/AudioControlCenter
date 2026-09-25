@@ -1,7 +1,7 @@
-using AudioControlCenter.Interop;
-using AudioControlCenter.Services;
+using BTAudioSwitcher.Interop;
+using BTAudioSwitcher.Services;
 
-namespace AudioControlCenter.Models;
+namespace BTAudioSwitcher.Models;
 
 /// <summary>蓝牙设备（UI 模型，包装 KS 枚举结果）</summary>
 public sealed class BluetoothDeviceItem : ObservableObject

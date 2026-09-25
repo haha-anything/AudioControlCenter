@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using AudioControlCenter.Models;
-using AudioControlCenter.Services;
+using BTAudioSwitcher.Models;
+using BTAudioSwitcher.Services;
 
-namespace AudioControlCenter.Views;
+namespace BTAudioSwitcher.Views;
 
 public partial class ControlCenterView : UserControl
 {

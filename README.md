@@ -28,7 +28,7 @@ cd AudioControlCenter
 dotnet build -c Release
 ```
 
-产物：`AudioControlCenter/bin/Release/net9.0-windows/AudioControlCenter.exe`
+产物：`AudioControlCenter/bin/Release/net9.0-windows10.0.22621.0/BT-Audio-Switcher.exe`
 
 ## 使用
 

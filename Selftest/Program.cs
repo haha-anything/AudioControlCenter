@@ -1,5 +1,5 @@
-﻿using AudioControlCenter.Interop;
-using AudioControlCenter.Services;
+﻿using BTAudioSwitcher.Interop;
+using BTAudioSwitcher.Services;
 using CSCore.CoreAudioAPI;
 
 // 服务层自检：验证设备/会话/蓝牙枚举是否真实可用
@@ -73,8 +73,8 @@ try
     Console.WriteLine("===== 电量读取（GATT Battery）=====");
     foreach (var b in bt.Devices)
     {
-        int? pct = AudioControlCenter.Interop.BtWinrt.ReadBatteryPercentAsync(
-            AudioControlCenter.Interop.BtWinrt.MacToUlong(b.Key)).GetAwaiter().GetResult();
+        int? pct = BTAudioSwitcher.Interop.BtWinrt.ReadBatteryPercentAsync(
+            BTAudioSwitcher.Interop.BtWinrt.MacToUlong(b.Key)).GetAwaiter().GetResult();
         Console.WriteLine($"  {b.Name} ({b.Key}): {(pct.HasValue ? pct + "%" : "读不到")}");
     }
 }
