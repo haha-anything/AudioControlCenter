@@ -193,11 +193,18 @@ public sealed class AudioService : IDisposable
             var (renderDevId, renderDevName, renderSession, captureDevId, captureDevName) = kv.Value;
             if (renderSession == null && captureDevId.Length == 0) continue;
 
+            var processName = GetProcessName(kv.Key);
+            var displayName = GetDisplayName(renderSession, kv.Key);
+
+            // 过滤已退出进程的残留会话：进程名和显示名都退化为裸PID时不显示
+            if (displayName == kv.Key.ToString() && processName == kv.Key.ToString())
+                continue;
+
             var item = new AppSessionItem
             {
                 ProcessId = kv.Key,
-                ProcessName = GetProcessName(kv.Key),
-                DisplayName = GetDisplayName(renderSession, kv.Key),
+                ProcessName = processName,
+                DisplayName = displayName,
                 IconPath = GetIconPath(kv.Key),
             };
 

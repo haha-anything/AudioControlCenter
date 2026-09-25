@@ -22,6 +22,7 @@ public sealed class ControlCenterViewModel : ObservableObject
     public ObservableCollection<BluetoothDeviceItem> ConnectedBluetoothDevices { get; } = new();
     public bool NoConnectedBluetooth => ConnectedBluetoothDevices.Count == 0;
 
+    public bool NoSessions => Sessions.Count == 0;
     private readonly DispatcherTimer _sessionTimer;
     private readonly DispatcherTimer _batteryTimer;
     private readonly DispatcherTimer _btTimer;
@@ -229,6 +230,7 @@ public sealed class ControlCenterViewModel : ObservableObject
             ApplyRememberedVolume(s);
             Sessions.Add(s);
         }
+        OnPropertyChanged(nameof(NoSessions));
     }
 
     private void ApplyRememberedVolume(AppSessionItem s)
