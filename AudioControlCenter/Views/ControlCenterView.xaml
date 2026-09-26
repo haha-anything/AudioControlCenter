@@ -210,68 +210,11 @@
             <StackPanel Margin="24,20,24,24">
 
                 <!-- ============ 功能区 (0)：总览 + 系统设备 + 应用音频 + 蓝牙 融合 ============ -->
-                <!-- ============ 功能区 (0)：连接蓝牙 + 系统设备 + 蓝牙设备 + 应用音频 ============ -->
+                <!-- ============ 功能区 (0)：蓝牙设备 + 系统设备 + 应用音频 ============ -->
                 <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=0}">
                     <TextBlock Text="功能区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
 
-                    <!-- 连接中的蓝牙（快捷卡） -->
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="📶 连接中的蓝牙" Style="{StaticResource SectionTitleStyle}"/>
-                            <Border Background="{DynamicResource ListFillBrush}" CornerRadius="8" Padding="10,8">
-                                <StackPanel>
-                                    <ItemsControl ItemsSource="{Binding ConnectedBluetoothDevices}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,4">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="🔗" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Name}" FontSize="17" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Content="断开" Style="{StaticResource SmallButtonStyle}"
-                                                            Click="BtToggle_Click" Tag="{Binding}" VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Text="（无）" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,2"
-                                               Visibility="{Binding NoConnectedBluetooth, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 系统默认设备（可切换：输出/输入下拉） -->
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="系统默认设备" Style="{StaticResource SectionTitleStyle}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="16"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="输出" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17" Margin="0,0,0,6"/>
-                                    <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding RenderDevices}"
-                                              SelectedItem="{Binding SelectedDefaultOutput, Mode=TwoWay}"
-                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="输入" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17" Margin="0,0,0,6"/>
-                                    <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding CaptureDevices}"
-                                              SelectedItem="{Binding SelectedDefaultInput, Mode=TwoWay}"
-                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 蓝牙设备管理（已配对 + 扫描） -->
+                    <!-- 蓝牙设备管理（已配对 + 扫描，置顶） -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
@@ -332,6 +275,32 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- 系统默认设备（可切换：输出/输入下拉） -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="系统默认设备" Style="{StaticResource SectionTitleStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="输出" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17" Margin="0,0,0,6"/>
+                                    <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding RenderDevices}"
+                                              SelectedItem="{Binding SelectedDefaultOutput, Mode=TwoWay}"
+                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="输入" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17" Margin="0,0,0,6"/>
+                                    <ComboBox Style="{StaticResource ComboStyle}" ItemsSource="{Binding CaptureDevices}"
+                                              SelectedItem="{Binding SelectedDefaultInput, Mode=TwoWay}"
+                                              ItemTemplate="{StaticResource DeviceItemTemplate}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- 应用音频 -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
@@ -358,7 +327,6 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
-
                 <!-- ============ 个性化区 (1)：主题 + 字号 + 最近设备数 + 快捷开关 ============ -->
                 <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=1}">
                     <TextBlock Text="个性化区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
