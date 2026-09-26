@@ -120,7 +120,8 @@
             <Style x:Key="ComboStyle" TargetType="ComboBox">
                 <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                 <Setter Property="Background" Value="{DynamicResource ComboBgBrush}"/>
-                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="12,0"/>
                 <Setter Property="MinHeight" Value="36"/>
                 <Setter Property="FontSize" Value="{DynamicResource BaseFontSize}"/>
@@ -133,7 +134,8 @@
                                               IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">
-                                            <Border x:Name="bd" Background="{DynamicResource ComboBgBrush}" CornerRadius="8">
+                                            <Border x:Name="bd" Background="{DynamicResource ComboBgBrush}"
+                                                    BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1" CornerRadius="8">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
