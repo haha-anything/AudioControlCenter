@@ -39,6 +39,15 @@ public sealed class SettingsStore
 
         /// <summary>首页/功能区显示最近蓝牙设备数量</summary>
         public int RecentDevicesCount { get; set; } = 3;
+
+        /// <summary>新设备插入/连接时自动设为默认输出</summary>
+        public bool AutoSwitchOutput { get; set; } = false;
+
+        /// <summary>蓝牙设备连接/断开时弹系统通知</summary>
+        public bool DeviceChangeNotify { get; set; } = true;
+
+        /// <summary>分应用独立设备开关（全局总开关）</summary>
+        public bool PerAppDeviceEnabled { get; set; } = true;
     }
 
     public SettingsStore(string? path = null)
@@ -122,6 +131,24 @@ public sealed class SettingsStore
     {
         get => _data.RecentDevicesCount;
         set { _data.RecentDevicesCount = value; Save(); }
+    }
+
+    public bool AutoSwitchOutput
+    {
+        get => _data.AutoSwitchOutput;
+        set { _data.AutoSwitchOutput = value; Save(); }
+    }
+
+    public bool DeviceChangeNotify
+    {
+        get => _data.DeviceChangeNotify;
+        set { _data.DeviceChangeNotify = value; Save(); }
+    }
+
+    public bool PerAppDeviceEnabled
+    {
+        get => _data.PerAppDeviceEnabled;
+        set { _data.PerAppDeviceEnabled = value; Save(); }
     }
 
     /// <summary>写开机自启注册表</summary>

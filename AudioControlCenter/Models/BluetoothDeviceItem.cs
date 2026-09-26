@@ -9,27 +9,36 @@ public sealed class BluetoothDeviceItem : ObservableObject
     public string Key { get; init; } = "";
     public string Name { get; init; } = "";
 
-    /// <summary>品牌图标（根据名称自动匹配，可被用户备注覆盖）</summary>
-    public string BrandIcon => GuessBrandIcon(Name);
+    /// <summary>品牌徽章（根据名称自动匹配，可被用户备注覆盖）</summary>
+    public DeviceBrandHelper.BrandInfo Brand
+    {
+        get
+        {
+            if (!string.IsNullOrEmpty(UserBrand))
+                return DeviceBrandHelper.FromUserBrand(UserBrand);
+            return DeviceBrandHelper.Guess(Name);
+        }
+    }
+
+    public string BrandInitial => DeviceBrandHelper.Initial(Brand.DisplayName, Brand.Key);
+    public string BrandColor => Brand.AccentHex;
+    public string BrandIcon => Brand.Icon;
 
     /// <summary>用户手动备注的品牌（覆盖自动匹配）</summary>
-    public string? UserBrand { get; set; }
-
-    /// <summary>根据设备名猜测品牌图标</summary>
-    public static string GuessBrandIcon(string name)
+    private string? _userBrand;
+    public string? UserBrand
     {
-        if (string.IsNullOrWhiteSpace(name)) return "📻";
-        var n = name.ToLowerInvariant();
-        if (n.Contains("srs") || n.Contains("gtk") || n.Contains("gtk")) return "🔊";           // 索尼音箱
-        if (n.Contains("wf-") || n.Contains("wh-") || n.Contains("wi-") || n.Contains("mdr-") || n.Contains("sony")) return "🎧"; // 索尼耳机
-        if (n.Contains("airpods") || n.Contains("iphone") || n.Contains("ipad") || n.Contains("find my") || n.Contains("bang")) return "🎧"; // 苹果
-        if (n.Contains("galaxy") || n.Contains("buds")) return "🎧";                                     // 三星
-        if (n.Contains("bose") || n.Contains("qc35") || n.Contains("qc45")) return "🎧";                  // Bose
-        if (n.Contains("jbl")) return "🔊";                                                             // JBL
-        if (n.Contains("dualsense") || n.Contains("dualshock") || n.Contains("xbox") || n.Contains("controller")) return "🎮"; // 手柄
-        if (n.Contains("mouse") || n.Contains("鼠标")) return "🖱️";
-        if (n.Contains("keyboard") || n.Contains("键盘")) return "⌨️";
-        return "📻";
+        get => _userBrand;
+        set
+        {
+            if (Set(ref _userBrand, value))
+            {
+                OnPropertyChanged(nameof(Brand));
+                OnPropertyChanged(nameof(BrandInitial));
+                OnPropertyChanged(nameof(BrandColor));
+                OnPropertyChanged(nameof(BrandIcon));
+            }
+        }
     }
 
     private bool _isConnected;
@@ -97,28 +106,12 @@ public sealed class ScanDeviceItem : ObservableObject
     public ulong Address { get; init; }
     public string Name { get; init; } = "";
 
-    /// <summary>品牌图标（根据名称自动匹配，可被用户备注覆盖）</summary>
-    public string BrandIcon => GuessBrandIcon(Name);
+    /// <summary>品牌徽章（根据名称自动匹配）</summary>
+    public DeviceBrandHelper.BrandInfo Brand => DeviceBrandHelper.Guess(Name);
+    public string BrandInitial => DeviceBrandHelper.Initial(Brand.DisplayName, Brand.Key);
+    public string BrandColor => Brand.AccentHex;
+    public string BrandIcon => Brand.Icon;
 
-    /// <summary>用户手动备注的品牌（覆盖自动匹配）</summary>
-    public string? UserBrand { get; set; }
-
-    /// <summary>根据设备名猜测品牌图标</summary>
-    public static string GuessBrandIcon(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "📻";
-        var n = name.ToLowerInvariant();
-        if (n.Contains("srs") || n.Contains("gtk") || n.Contains("gtk")) return "🔊";           // 索尼音箱
-        if (n.Contains("wf-") || n.Contains("wh-") || n.Contains("wi-") || n.Contains("mdr-") || n.Contains("sony")) return "🎧"; // 索尼耳机
-        if (n.Contains("airpods") || n.Contains("iphone") || n.Contains("ipad") || n.Contains("find my") || n.Contains("bang")) return "🎧"; // 苹果
-        if (n.Contains("galaxy") || n.Contains("buds")) return "🎧";                                     // 三星
-        if (n.Contains("bose") || n.Contains("qc35") || n.Contains("qc45")) return "🎧";                  // Bose
-        if (n.Contains("jbl")) return "🔊";                                                             // JBL
-        if (n.Contains("dualsense") || n.Contains("dualshock") || n.Contains("xbox") || n.Contains("controller")) return "🎮"; // 手柄
-        if (n.Contains("mouse") || n.Contains("鼠标")) return "🖱️";
-        if (n.Contains("keyboard") || n.Contains("键盘")) return "⌨️";
-        return "📻";
-    }
     public short Rssi { get; init; }
 
     private bool _isPairing;

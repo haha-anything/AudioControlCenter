@@ -15,11 +15,17 @@
                 <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBrush}"/>
             </DataTemplate>
 
+            <!-- 设备项模板（ComboBox 下拉用，key 引用） -->
+            <DataTemplate x:Key="DeviceItemTemplate" DataType="{x:Type models:AudioDeviceItem}">
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBrush}"/>
+            </DataTemplate>
+
             <!-- 转换器 -->
             <conv:IconConverter x:Key="IconConverter"/>
             <conv:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <conv:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <conv:HexColorConverter x:Key="HexColorConverter"/>
             <conv:TabVisibilityConverter x:Key="TabVisibilityConverter"/>
             <conv:TabCheckedConverter x:Key="TabCheckedConverter"/>
 

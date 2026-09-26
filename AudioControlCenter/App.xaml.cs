@@ -17,6 +17,7 @@ public partial class App : Application
 
     private TaskbarIcon? _tray;
     private PopupWindow? _popup;
+    private QuickPanelWindow? _quick;
     private MainWindow? _main;
     private Mutex? _mutex;
     private DateTime _lastSingleClickUtc;
@@ -79,9 +80,20 @@ public partial class App : Application
         // 低电量通知
         Vm.LowBatteryNotify += OnLowBatteryNotify;
 
-        // 调试辅助：--show-main 启动即打开主窗口；--show-popup 启动即弹出控制中心面板
+        // 蓝牙连接/断开系统通知
+        Vm.DeviceStateNotify += OnDeviceStateNotify;
+
+        // 事件驱动：启动音频设备监听（设备变化即时刷新，替代高频轮询）
+        Vm.Audio.StartMonitoring();
+
+        // 初始全量刷新
+        Vm.RefreshAll();
+
+        // 调试辅助：--show-main 启动即打开主窗口；--show-quick 弹出迷你面板；--show-popup 弹完整控制中心
         if (e.Args.Contains("--show-main"))
             ShowMainWindow();
+        else if (e.Args.Contains("--show-quick"))
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, ShowQuickPanel);
         else if (e.Args.Contains("--show-popup"))
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, ShowPopup);
 
@@ -99,6 +111,20 @@ public partial class App : Application
         catch { }
     }
 
+    /// <summary>蓝牙设备连接/断开通知</summary>
+    private void OnDeviceStateNotify(string name, bool connected)
+    {
+        try
+        {
+            if (!Vm.Settings.DeviceChangeNotify) return;
+            _tray?.ShowBalloonTip(
+                connected ? "蓝牙设备已连接" : "蓝牙设备已断开",
+                $"「{name}」{(connected ? "已连接" : "已断开")}",
+                BalloonIcon.Info);
+        }
+        catch { }
+    }
+
     private void Tray_SingleClick(object sender, RoutedEventArgs e)
     {
         // 双击防抖：350ms 内的第二次单击视为双击的一部分，交给 Tray_DoubleClick
@@ -109,13 +135,31 @@ public partial class App : Application
             return;
         }
         _lastSingleClickUtc = now;
-        ShowPopup();
+        ShowQuickPanel();
     }
 
     private void Tray_DoubleClick(object sender, RoutedEventArgs e)
     {
-        _popup?.Close();
+        _quick?.Close();
         ShowMainWindow();
+    }
+
+    /// <summary>单击托盘：弹出迷你控制面板（最近设备 + 默认设备 + 全局音量）</summary>
+    private void ShowQuickPanel()
+    {
+        if (_quick == null || !_quick.IsLoaded)
+        {
+            _quick = new QuickPanelWindow();
+            _quick.Closed += (_, _) => _quick = null;
+        }
+        _quick.ShowNearTray();
+    }
+
+    /// <summary>从迷你面板打开完整控制中心（静态入口，供视图调用）</summary>
+    public static void ShowFullPanel()
+    {
+        var app = (App)Current;
+        app.ShowPopup();
     }
 
     /// <summary>单击托盘：弹出控制中心面板（屏幕右下角）</summary>
@@ -158,6 +202,75 @@ public partial class App : Application
 
         menu.Items.Add(new System.Windows.Controls.Separator());
 
+        // ---------- 快速切换输出设备（点即切） ----------
+        var outputMenu = new System.Windows.Controls.MenuItem { Header = "🔊 默认输出设备" };
+        BuildDeviceSubMenu(outputMenu, isOutput: true);
+        menu.Items.Add(outputMenu);
+
+        // ---------- 快速切换输入设备 ----------
+        var inputMenu = new System.Windows.Controls.MenuItem { Header = "🎙️ 默认输入设备" };
+        BuildDeviceSubMenu(inputMenu, isOutput: false);
+        menu.Items.Add(inputMenu);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
+        // ---------- 快捷开关（折叠分组） ----------
+        var switches = new System.Windows.Controls.MenuItem { Header = "⚡ 快捷开关" };
+        var autoSwitch = new System.Windows.Controls.MenuItem
+        {
+            Header = "自动切换默认输出",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.AutoSwitchOutput,
+        };
+        autoSwitch.Click += (_, _) =>
+        {
+            Vm.Settings.AutoSwitchOutput = autoSwitch.IsChecked;
+            RebuildTrayMenu();
+        };
+        switches.Items.Add(autoSwitch);
+
+        var notify = new System.Windows.Controls.MenuItem
+        {
+            Header = "设备变化通知",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.DeviceChangeNotify,
+        };
+        notify.Click += (_, _) =>
+        {
+            Vm.Settings.DeviceChangeNotify = notify.IsChecked;
+            RebuildTrayMenu();
+        };
+        switches.Items.Add(notify);
+
+        var autostart = new System.Windows.Controls.MenuItem
+        {
+            Header = "开机自启",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.AutoStart,
+        };
+        autostart.Click += (_, _) =>
+        {
+            Vm.Settings.AutoStart = autostart.IsChecked;
+            RebuildTrayMenu();
+        };
+        switches.Items.Add(autostart);
+
+        var battery = new System.Windows.Controls.MenuItem
+        {
+            Header = "低电量提醒",
+            IsCheckable = true,
+            IsChecked = Vm.Settings.LowBatteryAlert,
+        };
+        battery.Click += (_, _) =>
+        {
+            Vm.Settings.LowBatteryAlert = battery.IsChecked;
+            RebuildTrayMenu();
+        };
+        switches.Items.Add(battery);
+        menu.Items.Add(switches);
+
+        menu.Items.Add(new System.Windows.Controls.Separator());
+
         var themeMenu = new System.Windows.Controls.MenuItem { Header = "🎨 主题" };
         var themes = new[] { ("跟随系统", 0), ("深色", 1), ("浅色", 2) };
         foreach (var (label, mode) in themes)
@@ -179,32 +292,6 @@ public partial class App : Application
         }
         menu.Items.Add(themeMenu);
 
-        var autostart = new System.Windows.Controls.MenuItem
-        {
-            Header = "🚀 开机自启",
-            IsCheckable = true,
-            IsChecked = Vm.Settings.AutoStart,
-        };
-        autostart.Click += (_, _) =>
-        {
-            Vm.Settings.AutoStart = autostart.IsChecked;
-            RebuildTrayMenu();
-        };
-        menu.Items.Add(autostart);
-
-        var battery = new System.Windows.Controls.MenuItem
-        {
-            Header = "🔋 低电量提醒",
-            IsCheckable = true,
-            IsChecked = Vm.Settings.LowBatteryAlert,
-        };
-        battery.Click += (_, _) =>
-        {
-            Vm.Settings.LowBatteryAlert = battery.IsChecked;
-            RebuildTrayMenu();
-        };
-        menu.Items.Add(battery);
-
         menu.Items.Add(new System.Windows.Controls.Separator());
 
         var refresh = new System.Windows.Controls.MenuItem { Header = "🔄 立即刷新" };
@@ -218,6 +305,49 @@ public partial class App : Application
         menu.Items.Add(exit);
 
         return menu;
+    }
+
+    /// <summary>构建设备子菜单（输出/输入，点击即切换默认设备；打开时动态刷新）</summary>
+    private void BuildDeviceSubMenu(System.Windows.Controls.MenuItem menu, bool isOutput)
+    {
+        menu.SubmenuOpened += (_, _) =>
+        {
+            try
+            {
+                menu.Items.Clear();
+                var devices = isOutput ? Vm.Audio.RenderDevices : Vm.Audio.CaptureDevices;
+                var defaultId = isOutput ? Vm.Audio.DefaultOutputId : Vm.Audio.DefaultInputId;
+                foreach (var d in devices)
+                {
+                    var item = new System.Windows.Controls.MenuItem
+                    {
+                        Header = d.IsPresent ? d.Name : $"{d.Name}（未连接）",
+                        IsCheckable = true,
+                        IsChecked = string.Equals(d.DeviceId, defaultId, StringComparison.OrdinalIgnoreCase),
+                        Tag = d,
+                    };
+                    item.Click += (_, _) =>
+                    {
+                        // 从 VM 集合取同 id 引用，保证下拉选中项一致
+                        var match = (isOutput ? Vm.RenderDevices : Vm.CaptureDevices)
+                            .FirstOrDefault(x => string.Equals(x.DeviceId, d.DeviceId, StringComparison.OrdinalIgnoreCase));
+                        if (match != null)
+                        {
+                            if (isOutput) Vm.SelectedDefaultOutput = match;
+                            else Vm.SelectedDefaultInput = match;
+                        }
+                        else
+                        {
+                            if (isOutput) Vm.Audio.SetGlobalDefaultOutput(d.DeviceId);
+                            else Vm.Audio.SetGlobalDefaultInput(d.DeviceId);
+                        }
+                        Vm.RefreshSessionsOnly();
+                    };
+                    menu.Items.Add(item);
+                }
+            }
+            catch { }
+        };
     }
 
     private void RebuildTrayMenu()

@@ -9,11 +9,6 @@
         <CollectionViewSource x:Key="RenderDevicesCVS" Source="{Binding RenderDevices}"/>
         <CollectionViewSource x:Key="CaptureDevicesCVS" Source="{Binding CaptureDevices}"/>
 
-        <!-- 设备项显示模板 -->
-        <DataTemplate x:Key="DeviceItemTemplate" DataType="{x:Type models:AudioDeviceItem}">
-            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextBrush}"/>
-        </DataTemplate>
-
         <!-- 应用行卡片（系统音量合成器样式） -->
         <DataTemplate x:Key="SessionTemplate" DataType="{x:Type models:AppSessionItem}">
             <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="12" Padding="14,12" Margin="0,0,0,8">
@@ -152,9 +147,14 @@
                                 ToolTip="备注品牌 / 设备信息"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="{Binding BrandIcon}" FontSize="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Grid Width="34" Height="34" Margin="0,0,8,0" VerticalAlignment="Center">
+                            <Border CornerRadius="17" Background="{Binding BrandColor, Converter={StaticResource HexColorConverter}}"/>
+                            <TextBlock Text="{Binding BrandInitial}" Foreground="White" FontWeight="Bold" FontSize="14"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBlock Text="{Binding BrandIcon}" FontSize="18" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" MaxWidth="140"/>
+                                   TextTrimming="CharacterEllipsis" MaxWidth="120"/>
                     </StackPanel>
                     <TextBlock Text="{Binding BatteryText}" FontSize="17" Margin="0,0,0,8">
                         <TextBlock.Style>
@@ -193,8 +193,16 @@
         <DataTemplate x:Key="ScanTemplate" DataType="{x:Type models:ScanDeviceItem}">
             <Border Background="{DynamicResource CardHoverBrush}" CornerRadius="10" Padding="12,10" Margin="0,0,10,10" MinWidth="160">
                 <StackPanel Width="160">
-                    <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold"
-                               TextTrimming="CharacterEllipsis" MaxWidth="150"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Grid Width="26" Height="26" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Border CornerRadius="13" Background="{Binding BrandColor, Converter={StaticResource HexColorConverter}}"/>
+                            <TextBlock Text="{Binding BrandInitial}" Foreground="White" FontWeight="Bold" FontSize="12"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+                        <TextBlock Text="{Binding BrandIcon}" FontSize="15" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                        <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="110"/>
+                    </StackPanel>
                     <TextBlock Text="{Binding MacText}" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="13" Margin="0,2,0,8"/>
                     <Button Content="{Binding PairButtonText}" Click="PairScan_Click" Tag="{Binding}"
                             IsEnabled="{Binding IsPaired, Converter={StaticResource InverseBoolConverter}}"
@@ -213,6 +221,68 @@
                 <!-- ============ 功能区 (0)：蓝牙设备 + 系统设备 + 应用音频 ============ -->
                 <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=0}">
                     <TextBlock Text="功能区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
+
+                    <!-- 最近使用设备：一键连接/断开快捷区 -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="⚡ 最近使用" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                            <ItemsControl ItemsSource="{Binding RecentQuickDevices}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Tag="{Binding}" Click="BtToggle_Click" Margin="0,0,10,10" Cursor="Hand"
+                                                Background="Transparent" BorderThickness="0">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="bd" Background="{DynamicResource ComboBgBrush}" CornerRadius="12" Padding="14,10">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Grid Width="36" Height="36" Margin="0,0,10,0">
+                                                                <Border CornerRadius="18" Background="{Binding BrandColor, Converter={StaticResource HexColorConverter}}"/>
+                                                                <TextBlock Text="{Binding BrandInitial}" Foreground="White" FontWeight="Bold" FontSize="15"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                            <StackPanel VerticalAlignment="Center">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" MaxWidth="150"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <TextBlock Text="{Binding BrandIcon}" FontSize="15" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
+                                                                        <Ellipse.Style>
+                                                                            <Style TargetType="Ellipse">
+                                                                                <Setter Property="Fill" Value="{DynamicResource TextTertiaryBrush}"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                                                                        <Setter Property="Fill" Value="{DynamicResource GreenBrush}"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Ellipse.Style>
+                                                                    </Ellipse>
+                                                                    <TextBlock Text="{Binding StatusText}" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}"/>
+                                                                    <TextBlock Text="{Binding BatteryText}" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" Margin="8,0,0,0"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource ItemHoverBrush}"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
 
                     <!-- 蓝牙设备管理（已配对 + 扫描，置顶） -->
                     <Border Style="{StaticResource CardStyle}">
@@ -386,7 +456,9 @@
                             <TextBlock Text="快捷开关" Style="{StaticResource SectionTitleStyle}"/>
                             <CheckBox Content="🚀 开机自启" IsChecked="{Binding Settings.AutoStart, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
                             <CheckBox Content="🔋 低电量提醒" IsChecked="{Binding Settings.LowBatteryAlert, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
-                            <TextBlock Text="托盘：单击=控制中心面板，双击=主窗口，右键=功能菜单"
+                            <CheckBox Content="⚡ 新设备连接时自动设为默认输出" IsChecked="{Binding AutoSwitchOutput, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
+                            <CheckBox Content="🔔 蓝牙设备连接/断开弹系统通知" IsChecked="{Binding DeviceChangeNotify, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
+                            <TextBlock Text="托盘：单击=迷你面板，双击=主窗口，右键=快捷菜单/设备切换"
                                        Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,10,0,0"/>
                         </StackPanel>
                     </Border>

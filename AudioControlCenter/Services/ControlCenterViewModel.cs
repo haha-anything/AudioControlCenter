@@ -124,6 +124,33 @@ public sealed class ControlCenterViewModel : ObservableObject
     }
     private int _recentDevicesCount;
 
+    /// <summary>新设备激活时自动设为默认输出（个性化区快捷开关）</summary>
+    public bool AutoSwitchOutput
+    {
+        get => Settings.AutoSwitchOutput;
+        set
+        {
+            if (Set(ref _autoSwitchOutput, value))
+            {
+                Settings.AutoSwitchOutput = value;
+                StatusText = value ? "已开启：新设备连接时自动切换为默认输出" : "已关闭自动切换";
+            }
+        }
+    }
+    private bool _autoSwitchOutput;
+
+    /// <summary>蓝牙连接/断开弹系统通知</summary>
+    public bool DeviceChangeNotify
+    {
+        get => Settings.DeviceChangeNotify;
+        set
+        {
+            if (Set(ref _deviceChangeNotify, value))
+                Settings.DeviceChangeNotify = value;
+        }
+    }
+    private bool _deviceChangeNotify;
+
     public ControlCenterViewModel()
     {
         Audio = new AudioService();
@@ -134,17 +161,20 @@ public sealed class ControlCenterViewModel : ObservableObject
         Bluetooth.DevicesChanged += OnBluetoothDevicesChanged;
         Bluetooth.ScanResultsChanged += OnScanResultsChanged;
 
-        // 会话实时监测：2 秒一轮（新应用打开/退出自动出现/消失）
-        _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        // ========== 事件驱动（省资源）：设备变化/默认变化即时响应，替代高频轮询 ==========
+        Audio.DeviceStructureChanged += OnAudioDeviceStructureChanged;
+        Audio.DefaultDeviceChanged += OnDefaultDeviceChangedBySystem;
+        Audio.OutputDeviceActivated += OnOutputDeviceActivated;
+        Audio.SessionCreated += OnSessionCreatedHint;
+
+        // 会话实时监测：5 秒低频兜底（新应用发声由 SessionCreated 事件即时响应；此轮询兜底会话退出/事件丢失）
+        _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _sessionTimer.Tick += (_, _) => RefreshSessionsOnly();
-
-
-        // 蓝牙连接状态定时刷新：8 秒一轮（外部断开/连接后 UI 自动同步）
-        _btTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        // 蓝牙连接状态低频兜底：30 秒（事件驱动为主，此处仅在事件丢失时兜底）
+        _btTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _btTimer.Tick += async (_, _) => await RefreshBluetoothStateAsync();
-
-        // 电量定时刷新：30 秒一轮；连接状态变化时也会补一次
-        _batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        // 电量定时刷新：60 秒低频；连接状态变化时也会补一次
+        _batteryTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
         _batteryTimer.Tick += async (_, _) => await RefreshBatteriesAsync();
 
         _sessionTimer.Start();
@@ -153,6 +183,103 @@ public sealed class ControlCenterViewModel : ObservableObject
 
         _fontSize = Settings.FontSize;
         _recentDevicesCount = Settings.RecentDevicesCount;
+        _autoSwitchOutput = Settings.AutoSwitchOutput;
+        _deviceChangeNotify = Settings.DeviceChangeNotify;
+    }
+
+    // ---------- 事件驱动处理 ----------
+
+    private readonly object _eventLock = new();
+    private DateTime _lastAutoSwitchUtc = DateTime.MinValue;
+    private DateTime _lastDeviceNotifyUtc = DateTime.MinValue;
+
+    /// <summary>新音频会话创建（可能来自任意线程）→ UI 线程刷新会话</summary>
+    private void OnSessionCreatedHint()
+    {
+        try
+        {
+            if (_loading > 0) return;
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+                RefreshSessionsOnly();
+            else
+                dispatcher.BeginInvoke(RefreshSessionsOnly);
+        }
+        catch { }
+    }
+
+    /// <summary>音频设备结构变化（插入/拔出/连接/断开）→ 刷新设备与蓝牙状态</summary>
+    private void OnAudioDeviceStructureChanged()
+    {
+        try
+        {
+            if (_loading > 0) return;
+            _ = RefreshBluetoothStateAsync(); // 设备结构变化驱动蓝牙状态刷新
+        }
+        catch { }
+    }
+
+    /// <summary>系统默认设备被外部改动（Windows 设置/其他软件）→ 同步 UI</summary>
+    private void OnDefaultDeviceChangedBySystem()
+    {
+        try
+        {
+            if (_loading > 0) return;
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+                RefreshDefaultSelection();
+            else
+                dispatcher.BeginInvoke(RefreshDefaultSelection);
+        }
+        catch { }
+    }
+
+    /// <summary>新输出设备激活 → 自动切换规则（可在个性化区开关）</summary>
+    private void OnOutputDeviceActivated(string deviceId)
+    {
+        try
+        {
+            if (_loading > 0) return;
+            if (!Settings.AutoSwitchOutput) return;
+            // 防抖：3 秒内只自动切换一次，避免误切
+            var now = DateTime.UtcNow;
+            lock (_eventLock)
+            {
+                if ((now - _lastAutoSwitchUtc).TotalSeconds < 3) return;
+                _lastAutoSwitchUtc = now;
+            }
+            var dev = Audio.RenderDevices.FirstOrDefault(d =>
+                string.Equals(d.DeviceId, deviceId, StringComparison.OrdinalIgnoreCase));
+            if (dev == null || dev.IsDefault || !dev.IsPresent) return;
+            // 只对蓝牙/刚刚激活的设备自动切换（避免拔插线缆误切）
+            if (Audio.SetGlobalDefaultOutput(deviceId))
+            {
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher == null || dispatcher.CheckAccess())
+                    RefreshDefaultSelection();
+                else
+                    dispatcher.BeginInvoke(RefreshDefaultSelection);
+                StatusText = $"已自动切换到输出设备：{dev.Name}";
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>重新同步默认设备选中（系统外部修改后 UI 跟随）</summary>
+    private void RefreshDefaultSelection()
+    {
+        _loading++;
+        try
+        {
+            Audio.RefreshDevices();
+            RefreshDeviceCollections();
+            SelectedDefaultOutput = RenderDevices.FirstOrDefault(d => d.IsDefault);
+            SelectedDefaultInput = CaptureDevices.FirstOrDefault(d => d.IsDefault);
+        }
+        finally
+        {
+            _loading--;
+        }
     }
 
     /// <summary>只刷新蓝牙连接状态（不重建设备列表）</summary>
@@ -162,6 +289,7 @@ public sealed class ControlCenterViewModel : ObservableObject
         {
             Audio.RefreshDevices();
             Bluetooth.Refresh(Audio);
+            var changed = new List<(string Name, bool Connected)>();
             for (int i = 0; i < BluetoothDevices.Count; i++)
             {
                 var src = Bluetooth.Devices.FirstOrDefault(x => x.Key == BluetoothDevices[i].Key);
@@ -169,15 +297,38 @@ public sealed class ControlCenterViewModel : ObservableObject
                 {
                     BluetoothDevices[i].IsConnected = src.IsConnected;
                     BluetoothDevices[i].RefreshStatus();
+                    changed.Add((src.Name, src.IsConnected));
                 }
             }
             ConnectedBluetoothDevices.Clear();
             foreach (var b in BluetoothDevices.Where(x => x.IsConnected)) ConnectedBluetoothDevices.Add(b);
             OnPropertyChanged(nameof(NoConnectedBluetooth));
             OnPropertyChanged(nameof(VisibleBluetoothDevices));
+            OnPropertyChanged(nameof(RecentQuickDevices));
+
+            // 连接状态变化 → 触发通知（App 弹托盘提示）+ 补一次电量
+            if (changed.Count > 0 && Settings.DeviceChangeNotify)
+            {
+                var now = DateTime.UtcNow;
+                bool allow;
+                lock (_eventLock)
+                {
+                    allow = (now - _lastDeviceNotifyUtc).TotalSeconds >= 3;
+                    if (allow) _lastDeviceNotifyUtc = now;
+                }
+                if (allow)
+                {
+                    var first = changed[0];
+                    DeviceStateNotify?.Invoke(first.Name, first.Connected);
+                }
+                _ = RefreshBatteriesAsync();
+            }
         }
         catch { }
     }
+
+    /// <summary>蓝牙设备连接/断开事件（App 弹系统通知）</summary>
+    public event Action<string, bool>? DeviceStateNotify;
     private void OnBluetoothDevicesChanged()
     {
         OnPropertyChanged(nameof(ShowAllButtonVisibility));
@@ -202,13 +353,7 @@ public sealed class ControlCenterViewModel : ObservableObject
             Audio.RefreshDevices();
             Bluetooth.Refresh(Audio);
 
-            RenderDevices.Clear();
-            foreach (var d in Audio.RenderDevices) RenderDevices.Add(d);
-            CaptureDevices.Clear();
-            foreach (var d in Audio.CaptureDevices) CaptureDevices.Add(d);
-
-            SelectedDefaultOutput = RenderDevices.FirstOrDefault(d => d.IsDefault);
-            SelectedDefaultInput = CaptureDevices.FirstOrDefault(d => d.IsDefault);
+            RefreshDeviceCollections();
 
             BluetoothDevices.Clear();
             foreach (var b in Bluetooth.Devices)
@@ -220,6 +365,7 @@ public sealed class ControlCenterViewModel : ObservableObject
             foreach (var b in BluetoothDevices.Where(x => x.IsConnected)) ConnectedBluetoothDevices.Add(b);
             OnPropertyChanged(nameof(NoConnectedBluetooth));
             OnPropertyChanged(nameof(VisibleBluetoothDevices));
+            OnPropertyChanged(nameof(RecentQuickDevices));
             OnPropertyChanged(nameof(ShowAllButtonVisibility));
 
             RefreshSessionsOnly();
@@ -234,6 +380,18 @@ public sealed class ControlCenterViewModel : ObservableObject
         }
     }
 
+    /// <summary>把 AudioService 设备集合同步到 UI 集合 + 默认选中</summary>
+    private void RefreshDeviceCollections()
+    {
+        RenderDevices.Clear();
+        foreach (var d in Audio.RenderDevices) RenderDevices.Add(d);
+        CaptureDevices.Clear();
+        foreach (var d in Audio.CaptureDevices) CaptureDevices.Add(d);
+
+        SelectedDefaultOutput = RenderDevices.FirstOrDefault(d => d.IsDefault);
+        SelectedDefaultInput = CaptureDevices.FirstOrDefault(d => d.IsDefault);
+    }
+
     /// <summary>蓝牙设备显示集合：默认前 3 个（最近优先），展开后全部</summary>
     public System.Collections.Generic.IEnumerable<BluetoothDeviceItem> VisibleBluetoothDevices
     {
@@ -246,6 +404,25 @@ public sealed class ControlCenterViewModel : ObservableObject
             // 最近 n 个优先，其余按名称补足到 n 个
             var list = recent.ToList();
             foreach (var b in BluetoothDevices.Where(x => !recentKeys.Contains(x.Key)).OrderBy(x => x.Name))
+            {
+                if (list.Count >= n) break;
+                list.Add(b);
+            }
+            return list;
+        }
+    }
+
+    /// <summary>最近使用设备快捷切换区（功能区顶部大按钮，点击即连）</summary>
+    public System.Collections.Generic.IEnumerable<BluetoothDeviceItem> RecentQuickDevices
+    {
+        get
+        {
+            int n = Math.Max(1, Settings.RecentDevicesCount);
+            var recent = Bluetooth.GetRecentDevices(n);
+            if (recent.Count > 0) return recent;
+            // 无连接历史时：已连接设备优先，其余补足
+            var list = BluetoothDevices.Where(x => x.IsConnected).ToList();
+            foreach (var b in BluetoothDevices.Where(x => !x.IsConnected).OrderBy(x => x.Name))
             {
                 if (list.Count >= n) break;
                 list.Add(b);
@@ -286,6 +463,7 @@ public sealed class ControlCenterViewModel : ObservableObject
         }
         await Bluetooth.SetConnectedAsync(item, !item.IsConnected);
         RefreshAll();
+        OnPropertyChanged(nameof(RecentQuickDevices));
     }
 
     // ---------- 蓝牙电量 ----------

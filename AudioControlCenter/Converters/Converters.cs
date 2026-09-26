@@ -47,10 +47,27 @@ public class InverseBoolConverter : IValueConverter
         => value is bool b && !b;
 }
 
-/// <summary>bool → 画刷（true=红色/强调，false=中性；parameter 可指定 "orange"）</summary>
-public class BoolToBrushConverter : IValueConverter
+/// <summary>Hex 颜色字符串（#RRGGBB）→ 画刷；非法值返回中性灰</summary>
+public class HexColorConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        try
+        {
+            if (value is string s && !string.IsNullOrWhiteSpace(s))
+                return new SolidColorBrush((Color)ColorConverter.ConvertFromString(s));
+        }
+        catch { }
+        return new SolidColorBrush(Color.FromRgb(0x60, 0x7D, 0x8B));
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
+/// <summary>bool → 画刷（true=红色/强调，false=中性；parameter 可指定 "orange"）</summary>
+public class BoolToBrushConverter : IValueConverter
+{    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is true)
         {

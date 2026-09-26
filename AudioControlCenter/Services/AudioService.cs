@@ -21,6 +21,93 @@ public sealed class AudioService : IDisposable
     /// <summary>系统默认输入设备 id</summary>
     public string? DefaultInputId { get; private set; }
 
+    /// <summary>音频设备结构变化（添加/移除/状态变化）→ 需要刷新设备与蓝牙状态</summary>
+    public event Action? DeviceStructureChanged;
+    /// <summary>系统默认设备被外部改变（设置里改了 / 切换）→ 需要刷新默认选中</summary>
+    public event Action? DefaultDeviceChanged;
+    /// <summary>某输出设备变为可用（Active）→ 自动切换规则监听</summary>
+    public event Action<string>? OutputDeviceActivated;
+    /// <summary>新音频会话创建（新应用发声）→ 需要刷新会话列表</summary>
+    public event Action? SessionCreated;
+
+    private MMDeviceEnumerator? _monitorEnumerator;
+    private MMNotificationClient? _notificationClient;
+    private AudioSessionManager2? _sessionManager;
+    private AudioSessionNotification? _sessionNotification;
+    private bool _monitoring;
+
+    /// <summary>启动设备变化监听（MMNotificationClient）。失败静默降级（继续用定时轮询兜底）。</summary>
+    public void StartMonitoring()
+    {
+        if (_monitoring) return;
+        try
+        {
+            _monitorEnumerator = new MMDeviceEnumerator();
+            _notificationClient = new MMNotificationClient(_monitorEnumerator);
+            _notificationClient.DeviceAdded += OnDeviceStructureChanged;
+            _notificationClient.DeviceRemoved += OnDeviceStructureChanged;
+            _notificationClient.DeviceStateChanged += OnDeviceStateChanged;
+            _notificationClient.DefaultDeviceChanged += (_, e) =>
+            {
+                try
+                {
+                    if (e.DataFlow == DataFlow.Render || e.DataFlow == DataFlow.Capture)
+                        DefaultDeviceChanged?.Invoke();
+                }
+                catch { }
+            };
+            _monitoring = true;
+        }
+        catch
+        {
+            _monitoring = false;
+        }
+
+        // 会话创建监听（MTA 线程注册）：新应用发声即时响应，替代高频会话轮询
+        try
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var enumerator = new MMDeviceEnumerator();
+                    using var defOut = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                    if (defOut != null)
+                    {
+                        _sessionManager = AudioSessionManager2.FromMMDevice(defOut);
+                        _sessionNotification = new AudioSessionNotification();
+                        _sessionNotification.SessionCreated += (_, _) =>
+                        {
+                            try { SessionCreated?.Invoke(); } catch { }
+                        };
+                        _sessionManager.RegisterSessionNotification(_sessionNotification);
+                    }
+                }
+                catch { }
+            }).Wait(3000);
+        }
+        catch { }
+    }
+
+    private void OnDeviceStructureChanged(object? sender, EventArgs e)
+    {
+        try { DeviceStructureChanged?.Invoke(); } catch { }
+    }
+
+    private void OnDeviceStateChanged(object? sender, DeviceStateChangedEventArgs e)
+    {
+        try
+        {
+            if (e.DeviceState == DeviceState.Active)
+            {
+                // 新设备变为 Active：可能是插入/连接的输出设备
+                try { OutputDeviceActivated?.Invoke(e.DeviceId); } catch { }
+            }
+            DeviceStructureChanged?.Invoke();
+        }
+        catch { }
+    }
+
     public List<AudioDeviceItem> RenderDevices { get; } = new();
     public List<AudioDeviceItem> CaptureDevices { get; } = new();
     public List<AppSessionItem> Sessions { get; } = new();
@@ -316,6 +403,36 @@ public sealed class AudioService : IDisposable
     public bool SetGlobalDefaultInput(string deviceId)
         => AudioPolicy.SetGlobalDefaultEndpoint(deviceId, EDataFlow.eCapture);
 
+    // ---------- 全局输出音量（迷你面板用） ----------
+
+    /// <summary>读取当前默认输出设备音量（0-1）；失败返回 null</summary>
+    public float? GetDefaultOutputVolume()
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            using var dev = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (dev == null) return null;
+            using var epv = dev.QueryInterface<AudioEndpointVolume>();
+            return epv?.MasterVolumeLevelScalar;
+        }
+        catch { return null; }
+    }
+
+    /// <summary>设置当前默认输出设备音量（0-1）</summary>
+    public void SetDefaultOutputVolume(float volume)
+    {
+        try
+        {
+            using var enumerator = new MMDeviceEnumerator();
+            using var dev = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (dev == null) return;
+            using var epv = dev.QueryInterface<AudioEndpointVolume>();
+            epv?.SetMasterVolumeLevelScalar(volume, Guid.Empty);
+        }
+        catch { }
+    }
+
     /// <summary>为应用设置输出设备（系统持久化）</summary>
     public bool SetSessionOutput(AppSessionItem session, string deviceId)
     {
@@ -412,5 +529,26 @@ public sealed class AudioService : IDisposable
 
     public void Dispose()
     {
+        try
+        {
+            if (_notificationClient != null && _monitorEnumerator != null)
+            {
+                _monitorEnumerator.UnregisterEndpointNotificationCallback(_notificationClient);
+                _notificationClient.Dispose();
+            }
+        }
+        catch { }
+        try
+        {
+            if (_sessionManager != null && _sessionNotification != null)
+                _sessionManager.UnregisterSessionNotification(_sessionNotification);
+            _sessionManager?.Dispose();
+        }
+        catch { }
+        _notificationClient = null;
+        _monitorEnumerator = null;
+        _sessionNotification = null;
+        _sessionManager = null;
+        _monitoring = false;
     }
 }
