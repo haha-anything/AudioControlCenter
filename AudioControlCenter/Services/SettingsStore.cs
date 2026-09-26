@@ -33,6 +33,12 @@ public sealed class SettingsStore
 
         /// <summary>低电量提醒</summary>
         public bool LowBatteryAlert { get; set; } = true;
+
+        /// <summary>界面基准字号</summary>
+        public int FontSize { get; set; } = 18;
+
+        /// <summary>首页/功能区显示最近蓝牙设备数量</summary>
+        public int RecentDevicesCount { get; set; } = 3;
     }
 
     public SettingsStore(string? path = null)
@@ -104,6 +110,18 @@ public sealed class SettingsStore
     {
         get => _data.LowBatteryAlert;
         set { _data.LowBatteryAlert = value; Save(); }
+    }
+
+    public int FontSize
+    {
+        get => _data.FontSize;
+        set { _data.FontSize = value; Save(); }
+    }
+
+    public int RecentDevicesCount
+    {
+        get => _data.RecentDevicesCount;
+        set { _data.RecentDevicesCount = value; Save(); }
     }
 
     /// <summary>写开机自启注册表</summary>

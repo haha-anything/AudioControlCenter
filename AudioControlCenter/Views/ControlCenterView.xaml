@@ -209,94 +209,103 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24,20,24,24">
 
-                <!-- ============ 首页 (0) ============ -->
+                <!-- ============ 功能区 (0)：总览 + 系统设备 + 应用音频 + 蓝牙 融合 ============ -->
                 <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=0}">
-                    <TextBlock Text="总览" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
+                    <TextBlock Text="功能区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
 
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="系统默认设备" Style="{StaticResource SectionTitleStyle}"/>
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="🔊 输出" FontSize="17" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding SelectedDefaultOutput.Name}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                            </Grid>
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="🎙️ 输入" FontSize="17" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                <TextBlock Grid.Column="1" Text="{Binding SelectedDefaultInput.Name}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
+                    <!-- 快捷总览行：三张并列小卡 -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="📶 连接中的蓝牙" Style="{StaticResource SectionTitleStyle}"/>
-                            <Border Background="{DynamicResource ListFillBrush}" CornerRadius="8" Padding="10,8">
-                                <StackPanel>
-                                    <ItemsControl ItemsSource="{Binding ConnectedBluetoothDevices}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,4">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="🔗" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Name}" FontSize="17" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Content="断开" Style="{StaticResource SmallButtonStyle}"
-                                                            Click="BtToggle_Click" Tag="{Binding}" VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Text="（无）" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,2"
-                                               Visibility="{Binding NoConnectedBluetooth, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="🎚️ 正在使用音频的应用" FontSize="17" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding Sessions.Count, StringFormat={}共 {0} 个}" FontSize="17"
-                                           Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="10,0,0,0"/>
+                        <!-- 系统默认设备 -->
+                        <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="系统默认设备" Style="{StaticResource SectionTitleStyle}"/>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="🔊 输出" FontSize="17" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SelectedDefaultOutput.Name}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="🎙️ 输入" FontSize="17" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding SelectedDefaultInput.Name}" FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
                             </StackPanel>
-                            <Border Background="{DynamicResource ListFillBrush}" CornerRadius="8" Padding="10,8">
-                                <StackPanel>
-                                    <ItemsControl ItemsSource="{Binding Sessions}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal" Margin="0,3">
-                                                    <Image Source="{Binding IconPath}" Width="22" Height="22" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding DisplayName}" FontSize="17" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Text="（暂无）" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,2"
-                                               Visibility="{Binding NoSessions, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </Border>
+
+                        <!-- 连接中的蓝牙 -->
+                        <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="📶 连接中的蓝牙" Style="{StaticResource SectionTitleStyle}"/>
+                                <Border Background="{DynamicResource ListFillBrush}" CornerRadius="8" Padding="10,8">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding ConnectedBluetoothDevices}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,4">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="🔗" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding Name}" FontSize="17" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Content="断开" Style="{StaticResource SmallButtonStyle}"
+                                                                Click="BtToggle_Click" Tag="{Binding}" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="（无）" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,2"
+                                                   Visibility="{Binding NoConnectedBluetooth, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 正在使用音频的应用 -->
+                        <Border Grid.Column="4" Style="{StaticResource CardStyle}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="🎚️ 正在使用音频的应用" FontSize="17" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Sessions.Count, StringFormat={}共 {0} 个}" FontSize="17"
+                                               Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" Margin="10,0,0,0"/>
                                 </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
+                                <Border Background="{DynamicResource ListFillBrush}" CornerRadius="8" Padding="10,8">
+                                    <StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Sessions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" Margin="0,3">
+                                                        <Image Source="{Binding IconPath}" Width="22" Height="22" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{Binding DisplayName}" FontSize="17" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="（暂无）" Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,2"
+                                                   Visibility="{Binding NoSessions, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
 
-                </StackPanel>
-                <!-- ============ 音频 (1) ============ -->
-                <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=1}">
-                    <TextBlock Text="音频" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
-
-                    <!-- 全局默认设备 -->
+                    <!-- 系统默认设备（可切换） -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Text="系统默认设备" Style="{StaticResource SectionTitleStyle}"/>
@@ -347,16 +356,12 @@
                             </TextBlock>
                         </StackPanel>
                     </Border>
-                </StackPanel>
 
-                <!-- ============ 蓝牙 (2) ============ -->
-                <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=2}">
-                    <TextBlock Text="蓝牙" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
-
+                    <!-- 蓝牙设备管理 -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="已配对设备" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
+                                <TextBlock Text="蓝牙设备" Style="{StaticResource SectionTitleStyle}" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                     <Button Content="{Binding ScanButtonText}" Click="Scan_Click"
                                             Style="{StaticResource PillButtonStyle}" Background="{DynamicResource ComboBgBrush}" Margin="0,0,8,0"/>
@@ -414,10 +419,11 @@
                     </Border>
                 </StackPanel>
 
-                <!-- ============ 设置 (3) ============ -->
-                <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=3}">
-                    <TextBlock Text="设置" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
+                <!-- ============ 个性化区 (1)：主题 + 字号 + 最近设备数 + 快捷开关 ============ -->
+                <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=1}">
+                    <TextBlock Text="个性化区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
 
+                    <!-- 主题 -->
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Text="主题" Style="{StaticResource SectionTitleStyle}"/>
@@ -427,12 +433,67 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- 显示设置 -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="显示" Style="{StaticResource SectionTitleStyle}"/>
+                            <Grid Margin="0,2,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="界面字号" FontSize="17" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" Width="120" SelectedItem="{Binding FontSize, Mode=TwoWay}"
+                                          Style="{StaticResource ComboStyle}">
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">16</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">17</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">19</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">20</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">21</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">22</sys:Int32>
+                                </ComboBox>
+                            </Grid>
+                            <Grid Margin="0,2,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="功能区显示最近蓝牙设备数" FontSize="17" VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1" Width="120" SelectedItem="{Binding RecentDevicesCount, Mode=TwoWay}"
+                                          Style="{StaticResource ComboStyle}">
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">2</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">3</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">4</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">5</sys:Int32>
+                                    <sys:Int32 xmlns:sys="clr-namespace:System;assembly=mscorlib">6</sys:Int32>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 快捷开关 -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="快捷开关" Style="{StaticResource SectionTitleStyle}"/>
+                            <CheckBox Content="🚀 开机自启" IsChecked="{Binding Settings.AutoStart, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
+                            <CheckBox Content="🔋 低电量提醒" IsChecked="{Binding Settings.LowBatteryAlert, Mode=TwoWay}" Margin="0,4" FontSize="17"/>
+                            <TextBlock Text="托盘：单击=控制中心面板，双击=主窗口，右键=功能菜单"
+                                       Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="2,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ============ 设置区 (2) ============ -->
+                <StackPanel Visibility="{Binding SelectedTab, Converter={StaticResource TabVisibilityConverter}, ConverterParameter=2}">
+                    <TextBlock Text="设置区" FontSize="24" FontWeight="Bold" Margin="2,0,0,16"/>
+
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Text="关于" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="BT Audio Switcher V3 · 托盘常驻，一键切换蓝牙与分应用音频"
+                            <TextBlock Text="BT Audio Switcher · 托盘常驻，一键切换蓝牙与分应用音频"
                                        Foreground="{DynamicResource TextSecondaryBrush}" FontSize="17"/>
-                            <TextBlock Text="托盘：单击=控制中心面板，双击=主窗口，右键=刷新/退出"
+                            <TextBlock Text="版本 v1.1.0 · Win11 · 自包含免安装运行"
                                        Foreground="{DynamicResource TextTertiaryBrush}" FontSize="17" Margin="0,6,0,0"/>
                             <Button Content="🔄 立即刷新" Click="Refresh_Click" Style="{StaticResource PillButtonStyle}"
                                     Background="{DynamicResource ComboBgBrush}" Margin="0,12,0,0" HorizontalAlignment="Left"/>

@@ -255,6 +255,13 @@ public partial class App : Application
                 appDict.MergedDictionaries[0] = dic;
             else
                 appDict.MergedDictionaries.Add(dic);
+
+            // 按个性化设置更新全局基准字号
+            if (Current.Resources["BaseFontSize"] is double oldSize)
+            {
+                double newSize = Vm?.Settings.FontSize is int fs && fs >= 14 ? fs : oldSize;
+                Current.Resources["BaseFontSize"] = newSize;
+            }
         }
         catch { }
     }

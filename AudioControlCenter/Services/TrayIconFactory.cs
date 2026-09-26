@@ -10,6 +10,19 @@ internal static class TrayIconFactory
 {
     public static Icon Create()
     {
+        try
+        {
+            // 优先使用嵌入的 LOGO 图标资源（32x32）
+            var stream = System.Windows.Application.GetResourceStream(
+                new Uri("pack://application:,,,/BT-Audio-Switcher.ico"))?.Stream;
+            if (stream != null)
+            {
+                using (stream)
+                    return new Icon(stream, 32, 32);
+            }
+        }
+        catch { /* 资源缺失时回退到程序内绘制 */ }
+
         using var bmp = new Bitmap(32, 32);
         using (var g = Graphics.FromImage(bmp))
         {

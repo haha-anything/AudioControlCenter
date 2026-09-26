@@ -69,6 +69,21 @@ try
         }
     }
 
+    // 全局默认设备切换验证（切到非默认再切回，验证 HRESULT）
+    Console.WriteLine("===== 全局默认设备切换 ====");
+    foreach (var flow in new[] { BTAudioSwitcher.Interop.EDataFlow.eRender, BTAudioSwitcher.Interop.EDataFlow.eCapture })
+    {
+        var list = flow == BTAudioSwitcher.Interop.EDataFlow.eRender ? audio.RenderDevices : audio.CaptureDevices;
+        var current = list.FirstOrDefault(x => x.IsDefault);
+        var other = list.FirstOrDefault(x => !x.IsDefault && x.IsPresent);
+        if (current == null || other == null) { Console.WriteLine($"  {flow}: 设备不足，跳过"); continue; }
+        Console.WriteLine($"  {flow}: 当前默认=[{current.Name}] 切到=[{other.Name}]");
+        bool ok1 = BTAudioSwitcher.Interop.AudioPolicy.SetGlobalDefaultEndpoint(other.DeviceId, flow);
+        System.Threading.Thread.Sleep(500);
+        bool ok2 = BTAudioSwitcher.Interop.AudioPolicy.SetGlobalDefaultEndpoint(current.DeviceId, flow);
+        Console.WriteLine($"  {flow}: 切走={ok1} 切回={ok2} (应均为 True)");
+    }
+
     // 电量读取验证（对每个设备试 GATT Battery）
     Console.WriteLine("===== 电量读取（GATT Battery）=====");
     foreach (var b in bt.Devices)

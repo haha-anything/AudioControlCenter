@@ -10,9 +10,11 @@
     <RootNamespace>BTAudioSwitcher</RootNamespace>
     <Product>BT Audio Switcher</Product>
     <AssemblyTitle>BT Audio Switcher</AssemblyTitle>
+    <ApplicationIcon>BT-Audio-Switcher.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <Resource Include="BT-Audio-Switcher.ico" />
     <PackageReference Include="CSCore" Version="1.2.1.2" />
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
   </ItemGroup>

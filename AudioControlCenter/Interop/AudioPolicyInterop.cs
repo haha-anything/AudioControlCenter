@@ -114,18 +114,14 @@ internal class PolicyConfigClient
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface IPolicyConfigWin7
 {
-    void Unused1();
-    void Unused2();
-    void Unused3();
-    void Unused4();
-    void Unused5();
-    void Unused6();
-    void Unused7();
-    void Unused8();
-    void GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, IntPtr pkey, IntPtr pv);
-    void SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, IntPtr pkey, IntPtr pv);
-    void SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, ERole eRole);
-    void SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, short isVisible);
+    [PreserveSig]
+    int GetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, IntPtr pkey, IntPtr pv);
+    [PreserveSig]
+    int SetPropertyValue([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, IntPtr pkey, IntPtr pv);
+    [PreserveSig]
+    int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, ERole eRole);
+    [PreserveSig]
+    int SetEndpointVisibility([MarshalAs(UnmanagedType.LPWStr)] string wszDeviceId, short isVisible);
 }
 
 /// <summary>
@@ -257,9 +253,11 @@ public static class AudioPolicy
         try
         {
             // 渲染与采集设备 ID 空间不同，但 PolicyConfig 的 SetDefaultEndpoint 直接收 MMDevice id
-            _policyClient.SetDefaultEndpoint(deviceId, ERole.eMultimedia);
-            _policyClient.SetDefaultEndpoint(deviceId, ERole.eConsole);
-            return true;
+            int hr1 = _policyClient.SetDefaultEndpoint(deviceId, ERole.eMultimedia);
+            int hr2 = _policyClient.SetDefaultEndpoint(deviceId, ERole.eConsole);
+            bool ok = hr1 >= 0 && hr2 >= 0;
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diag.log"), $"[{DateTime.Now:HH:mm:ss}] SetGlobalDefaultEndpoint flow={flow} hr={hr1}/{hr2} ok={ok} dev={deviceId}" + Environment.NewLine); } catch { }
+            return ok;
         }
         catch (Exception ex)
         {

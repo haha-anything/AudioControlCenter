@@ -85,7 +85,7 @@ public sealed class ControlCenterViewModel : ObservableObject
     public bool ShowAllButtonVisibility => BluetoothDevices.Count > 3;
 
     private int _selectedTab = 0;
-    /// <summary>左侧导航：0=首页 1=音频 2=蓝牙 3=设置</summary>
+    /// <summary>左侧导航：0=功能区 1=个性化区 2=设置区</summary>
     public int SelectedTab
     {
         get => _selectedTab;
@@ -93,6 +93,36 @@ public sealed class ControlCenterViewModel : ObservableObject
     }
 
     private int _loading; // 加载期间禁止触发 setter 副作用
+
+    /// <summary>界面基准字号（个性化区可调，应用到全局）</summary>
+    public int FontSize
+    {
+        get => Settings.FontSize;
+        set
+        {
+            if (Set(ref _fontSize, value))
+            {
+                Settings.FontSize = value;
+                App.ApplyTheme(Settings.ThemeMode); // 重建资源后更新 BaseFontSize
+            }
+        }
+    }
+    private int _fontSize;
+
+    /// <summary>最近蓝牙设备显示数量</summary>
+    public int RecentDevicesCount
+    {
+        get => Settings.RecentDevicesCount;
+        set
+        {
+            if (Set(ref _recentDevicesCount, value))
+            {
+                Settings.RecentDevicesCount = value;
+                OnPropertyChanged(nameof(VisibleBluetoothDevices));
+            }
+        }
+    }
+    private int _recentDevicesCount;
 
     public ControlCenterViewModel()
     {
@@ -120,6 +150,9 @@ public sealed class ControlCenterViewModel : ObservableObject
         _sessionTimer.Start();
         _btTimer.Start();
         _batteryTimer.Start();
+
+        _fontSize = Settings.FontSize;
+        _recentDevicesCount = Settings.RecentDevicesCount;
     }
 
     /// <summary>只刷新蓝牙连接状态（不重建设备列表）</summary>
@@ -207,13 +240,14 @@ public sealed class ControlCenterViewModel : ObservableObject
         get
         {
             if (ShowAllBluetooth) return BluetoothDevices;
-            var recent = Bluetooth.GetRecentDevices(3);
+            int n = Math.Max(1, Settings.RecentDevicesCount);
+            var recent = Bluetooth.GetRecentDevices(n);
             var recentKeys = recent.Select(r => r.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            // 最近 3 个优先，其余按名称补足到 3 个
+            // 最近 n 个优先，其余按名称补足到 n 个
             var list = recent.ToList();
             foreach (var b in BluetoothDevices.Where(x => !recentKeys.Contains(x.Key)).OrderBy(x => x.Name))
             {
-                if (list.Count >= 3) break;
+                if (list.Count >= n) break;
                 list.Add(b);
             }
             return list;

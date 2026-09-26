@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:BTAudioSwitcher.Views"
         Title="BT Audio Switcher"
+        Icon="BT-Audio-Switcher.ico"
         Width="920" Height="700"
         MinHeight="600" MinWidth="820"
         Background="{DynamicResource BgBrush}"
@@ -20,14 +21,17 @@
                 <TextBlock DockPanel.Dock="Top" Text="BT Audio Switcher" FontSize="17" FontWeight="Bold"
                            Foreground="{DynamicResource TextBrush}" Margin="16,0,0,22"/>
                 <StackPanel>
-                    <RadioButton Content="🏠  首页" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+                    <TextBlock Text="功能" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" Margin="18,4,0,6"/>
+                    <RadioButton Content="🎛️  功能区" Style="{StaticResource NavButtonStyle}" Margin="8,2"
                                  IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=0, Mode=TwoWay}"/>
-                    <RadioButton Content="🎚️  音频" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+
+                    <TextBlock Text="个性化" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" Margin="18,16,0,6"/>
+                    <RadioButton Content="🎨  个性化区" Style="{StaticResource NavButtonStyle}" Margin="8,2"
                                  IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=1, Mode=TwoWay}"/>
-                    <RadioButton Content="📶  蓝牙" Style="{StaticResource NavButtonStyle}" Margin="8,2"
+
+                    <TextBlock Text="系统" FontSize="14" Foreground="{DynamicResource TextTertiaryBrush}" Margin="18,16,0,6"/>
+                    <RadioButton Content="⚙️  设置区" Style="{StaticResource NavButtonStyle}" Margin="8,2"
                                  IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=2, Mode=TwoWay}"/>
-                    <RadioButton Content="⚙️  设置" Style="{StaticResource NavButtonStyle}" Margin="8,2"
-                                 IsChecked="{Binding SelectedTab, Converter={StaticResource TabCheckedConverter}, ConverterParameter=3, Mode=TwoWay}"/>
                 </StackPanel>
             </DockPanel>
         </Border>
